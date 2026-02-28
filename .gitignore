@@ -1,2 +1,16 @@
 browser.json
 cookies.json
+__pycache__/
+.DS_Store
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite
+*.log
+*.bak
+*.tmp
+*.swp
+*.swo
+*.egg-info/
+dist/
