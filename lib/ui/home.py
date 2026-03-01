@@ -42,12 +42,6 @@ def create_home_page(
         logging.info(f"Updating UI with {len(home)} sections.")
         for section in home:
             section_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-
-            # Large Header
-            # header = Gtk.Label(label=section.title)
-            # header.set_halign(Gtk.Align.START)
-            # header.add_css_class("title-2")  # Makes the text large and bold
-            # section_box.append(header)
             # Add padding to the header
             header = Gtk.Label(label=section.title)
             header.set_halign(Gtk.Align.START)
@@ -108,8 +102,9 @@ def create_home_page(
                 # Make the entire card clickable
                 click = Gtk.GestureClick.new()
 
-                def on_card_click(gesture, n_press, x, y, track_title=item.title):
-                    logging.info(f"Clicked on card: {track_title}")
+                def on_card_click(gesture, n_press, x, y, current_item=item):
+                    # current_item is a fix to capture the correct item in the loop
+                    logging.info(f"Clicked on card: {current_item}")
                     # Here you would implement the logic to play the track or open the album
                     # For example, you could emit a signal or call a function with the item's ID
                     # play_track(item.video_id)  # Example function call

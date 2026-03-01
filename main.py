@@ -4,9 +4,7 @@ from lib.types import YTMusicSubject
 from lib.ui.home import create_home_page
 from lib.player import player
 import logging
-from utils import load_image_async
 from typing import Optional
-from lib.data import HomePageType
 import logging
 import os
 import sys
