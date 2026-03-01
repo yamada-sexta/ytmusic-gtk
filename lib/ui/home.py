@@ -10,17 +10,19 @@ import ytmusicapi
 from typing import Optional
 from gi.repository import Gtk, GLib, Adw, Pango
 from utils import load_image_async
-import reactivex as rx
 from reactivex.subject import BehaviorSubject
 
 
 def home_item_card(item: HomeItem) -> Gtk.Box:
     card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
     card.set_size_request(160, -1)
+    # THE FIX: Stop the card from expanding to fill the Carousel horizontally
+    card.set_halign(Gtk.Align.START)
     card.add_css_class("card")
 
+    # Now that the card is rigidly 160px wide, setting the image to 160x160 works perfectly
     img = Gtk.Picture()
-    img.set_size_request(200, 160)
+    img.set_size_request(160, 160)
     img.set_can_shrink(True)
     img.set_content_fit(Gtk.ContentFit.COVER)
 
