@@ -1,3 +1,5 @@
+from lib.data import HomeItem
+from lib.data import HomeSection
 import threading
 from lib.data import HomePageType
 from lib.data import HomePage
@@ -10,6 +12,77 @@ from gi.repository import Gtk, GLib, Adw, Pango
 from utils import load_image_async
 import reactivex as rx
 from reactivex.subject import BehaviorSubject
+
+
+def home_item_card(item: HomeItem) -> Gtk.Box:
+    card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+    card.set_size_request(160, -1)
+    card.add_css_class("card")
+
+    img = Gtk.Picture()
+    img.set_size_request(200, 160)
+    img.set_can_shrink(True)
+    img.set_content_fit(Gtk.ContentFit.COVER)
+
+    if hasattr(item, "thumbnails") and item.thumbnails:
+        thumb_url = (
+            item.thumbnails[-1].url
+            if isinstance(item.thumbnails, list)
+            else item.thumbnails
+        )
+        load_image_async(img, thumb_url)
+
+    title_lbl = Gtk.Label(label=item.title)
+    title_lbl.set_halign(Gtk.Align.START)
+    title_lbl.set_wrap(True)
+    title_lbl.set_lines(2)
+    title_lbl.set_ellipsize(Pango.EllipsizeMode.END)
+
+    creator = item.artists[0].name if getattr(item, "artists", None) else "Unknown"
+    subtitle_lbl = Gtk.Label(label=creator)
+    subtitle_lbl.set_halign(Gtk.Align.START)
+    subtitle_lbl.add_css_class("dim-label")
+    subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.END)
+
+    card.append(img)
+    card.append(title_lbl)
+    card.append(subtitle_lbl)
+
+    click = Gtk.GestureClick.new()
+
+    def on_card_click(gesture, n_press, x, y):
+        logging.info(f"Clicked on card: {item}")
+
+    click.connect("pressed", on_card_click)
+    card.add_controller(click)
+
+    return card
+
+
+def home_page_section(section: HomeSection) -> Gtk.Box:
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+    header = Gtk.Label(label=section.title)
+    header.set_halign(Gtk.Align.START)
+    header.set_margin_start(12)
+    header.set_margin_bottom(8)
+    header.add_css_class("title-2")  # Makes the text large and bold
+    box.append(header)
+
+    carousel = Adw.Carousel()
+    carousel.set_spacing(16)
+    carousel.set_allow_scroll_wheel(True)
+
+    for item in section.contents:
+        card = home_item_card(item)
+        carousel.append(card)
+
+    dots = Adw.CarouselIndicatorDots()
+    dots.set_carousel(carousel)
+
+    box.append(carousel)
+    box.append(dots)
+
+    return box
 
 
 def create_home_page(
@@ -76,86 +149,7 @@ def create_home_page(
             return
         logging.info(f"Updating UI with {len(home)} sections.")
         for section in home:
-            section_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-            # Add padding to the header
-            header = Gtk.Label(label=section.title)
-            header.set_halign(Gtk.Align.START)
-            header.set_margin_start(12)
-            header.set_margin_bottom(8)
-            header.add_css_class("title-2")  # Makes the text large and bold
-            section_box.append(header)
-
-            # Horizontal Carousel for the cards
-            carousel = Adw.Carousel()
-            carousel.set_spacing(16)
-            carousel.set_allow_scroll_wheel(True)
-
-            for item in section.contents:
-                # Build the Card
-                card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-                card.set_size_request(160, -1)
-                card.add_css_class("card")
-
-                # Thumbnail Picture
-                img = Gtk.Picture()
-                img.set_size_request(200, 160)
-                img.set_can_shrink(True)
-                img.set_content_fit(Gtk.ContentFit.COVER)
-
-                # Try to fetch the thumbnail URL if it exists
-                if hasattr(item, "thumbnails") and item.thumbnails:
-                    # Usually better to pick a medium resolution thumbnail
-                    thumb_url = (
-                        item.thumbnails[-1].url
-                        if isinstance(item.thumbnails, list)
-                        else item.thumbnails
-                    )
-                    load_image_async(img, thumb_url)
-
-                # Title under thumbnail
-                title_lbl = Gtk.Label(label=item.title)
-                title_lbl.set_halign(Gtk.Align.START)
-                title_lbl.set_wrap(True)
-                title_lbl.set_lines(2)
-                title_lbl.set_ellipsize(Pango.EllipsizeMode.END)
-
-                # Optional: Subtitle (Artist)
-                creator = (
-                    item.artists[0].name
-                    if getattr(item, "artists", None)
-                    else "Unknown"
-                )
-                subtitle_lbl = Gtk.Label(label=creator)
-                subtitle_lbl.set_halign(Gtk.Align.START)
-                subtitle_lbl.add_css_class("dim-label")
-                subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.END)
-
-                card.append(img)
-                card.append(title_lbl)
-                card.append(subtitle_lbl)
-
-                # Make the entire card clickable
-                click = Gtk.GestureClick.new()
-
-                def on_card_click(gesture, n_press, x, y, current_item=item):
-                    # current_item is a fix to capture the correct item in the loop
-                    logging.info(f"Clicked on card: {current_item}")
-                    # Here you would implement the logic to play the track or open the album
-                    # For example, you could emit a signal or call a function with the item's ID
-                    # play_track(item.video_id)  # Example function call
-
-                click.connect("pressed", on_card_click)
-                card.add_controller(click)
-
-                carousel.append(card)
-
-            # The "circle click thing" (Carousel indicators below the items)
-            dots = Adw.CarouselIndicatorDots()
-            dots.set_carousel(carousel)
-
-            section_box.append(carousel)
-            section_box.append(dots)
-
+            section_box = home_page_section(section)
             home_box.append(section_box)
 
         is_loading = False
