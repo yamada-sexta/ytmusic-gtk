@@ -1,3 +1,6 @@
+from data import HomePage
+from data import ExploreData
+import logging
 from client import auto_login
 from data import Songs
 from data import AccountInfo
@@ -23,21 +26,34 @@ if yt:
         # 1. Get your account name/info
         data = yt.get_account_info()
         info = AccountInfo(**data)
-    # log all info
         logging.info(f"Account Info: {info}")
-        print(f"👤 Account: {info.account_name}")
+        print(f"Account: {info.account_name}")
 
         # 2. Fetch the titles of your last 3 played songs
         raw_history = yt.get_history()
         history = Songs.validate_python(raw_history[:3])
 
         # log the history data
-        logging.info(f"History Data: {history[:3]}")  # Log the first
-        print("\n🎵 Your Recent History:")
-        for i, track in enumerate(history[:3], 1):
-            title = track.title
-            artist = track.artists[0].name
-            print(f"  {i}. {title} - {artist}")
+        logging.info(f"History Data: {history}")  # Log the first
+        
+        # Get explore
+        raw_explore = yt.get_explore()
+        
+        # Parse the explore data
+        explore_data = ExploreData.model_validate(raw_explore)
+        logging.info(f"Explore Data: {explore_data}")  # Log the explore data
+
+        raw_home = yt.get_home(limit=5)        
+        # Parse the list of sections
+        home_data = HomePage.validate_python(raw_home)
+        # logging.info(f"Home Data: {home_data}")  # Log the home data
+
+        for section in home_data:
+            print(f"📌 Section: {section.title}")
+            for item in section.contents[:2]: # Just looking at the first 2 items per section
+                # If it has an author, it's likely a playlist. Otherwise, a track.
+                creator = item.artists[0].name if item.artists else (item.author[0].name if item.author else "Unknown")
+                print(f"   - {item.title} by {creator}")
 
         # 3. Check your library size
         library = yt.get_library_playlists(limit=5)

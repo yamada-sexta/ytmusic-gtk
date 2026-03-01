@@ -1,7 +1,4 @@
-
-# Constants for cache files
-from pycookiecheat import firefox_cookies
-from pycookiecheat import chrome_cookies
+from pycookiecheat import firefox_cookies,chrome_cookies
 import ytmusicapi
 from typing import Optional
 import os
@@ -33,6 +30,7 @@ def save_cookies(cookies_dict: dict):
         logging.info(f"Cookies saved to {COOKIE_CACHE}")
     except Exception as e:
         logging.error(f"Failed to save cookies: {e}")
+
 def get_cookies_for_url(url: str) -> Optional[dict]:
     """Extract cookies for a given URL using pycookiecheat."""
     try:
@@ -50,7 +48,7 @@ def get_cookies_for_url(url: str) -> Optional[dict]:
         logging.error(f"Error extracting cookies for {url}: {e}")
         return None
 
-def auto_login():
+def auto_login() -> Optional[ytmusicapi.YTMusic]:
     """Automates the login process by extracting cookies from Chrome and bypassing the auth type check.
 
     If a cookie cache exists we prefer that data and avoid re-extraction from the browser.
@@ -62,8 +60,8 @@ def auto_login():
         # 2. Get the real cookies from your Mac
         try:
             url = "https://music.youtube.com"
-            cookies_dict = chrome_cookies(url)
-            if not cookies_dict:
+            cookies_dict = get_cookies_for_url(url)
+            if cookies_dict is None:
                 logging.error("[error] No cookies found for the specified URL.")
                 return None
             # check if it is a dict instead of a list
