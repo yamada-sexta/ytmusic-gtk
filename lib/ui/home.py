@@ -15,7 +15,6 @@ from reactivex.subject import BehaviorSubject
 
 def home_item_card(item: HomeItem) -> Gtk.Box:
     card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-    # Stop the card from expanding
     card.set_size_request(160, -1)
     card.set_halign(Gtk.Align.START)
     card.set_valign(Gtk.Align.START)
@@ -23,7 +22,6 @@ def home_item_card(item: HomeItem) -> Gtk.Box:
 
     img = Gtk.Picture()
     img.set_can_shrink(True)
-    # COVER forces the image to crop nicely into our 1:1 box instead of squishing
     img.set_content_fit(Gtk.ContentFit.COVER)
 
     if item.thumbnails:
@@ -34,27 +32,30 @@ def home_item_card(item: HomeItem) -> Gtk.Box:
         )
         load_image_async(img, thumb_url)
 
-    # --- THE MAGIC CAGE ---
-    # This forces a perfect 1:1 square and silences the image's original aspect ratio
+    # 1. CAGE THE IMAGE: Force a strict 1:1 square
     aspect = Gtk.AspectFrame()
-    aspect.set_ratio(1.0)  # 1.0 = Strict 1:1 Square
-    aspect.set_obey_child(False)  # CRITICAL: Ignore the raw image's actual shape
+    aspect.set_ratio(1.0)
+    aspect.set_obey_child(False)
     aspect.set_child(img)
-    aspect.set_size_request(160, 160)  # Lock the frame to exactly 160x160
+    aspect.set_size_request(160, 160)
 
+    # 2. CAGE THE TEXT: Stop the text from stretching the grey card!
     title_lbl = Gtk.Label(label=item.title)
     title_lbl.set_halign(Gtk.Align.START)
     title_lbl.set_wrap(True)
     title_lbl.set_lines(2)
     title_lbl.set_ellipsize(Pango.EllipsizeMode.END)
+    # This line is the magic fix for the stretching card:
+    title_lbl.set_max_width_chars(1)
 
     creator = item.artists[0].name if item.artists else "Unknown"
     subtitle_lbl = Gtk.Label(label=creator)
     subtitle_lbl.set_halign(Gtk.Align.START)
     subtitle_lbl.add_css_class("dim-label")
     subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.END)
+    # Also cage the subtitle:
+    subtitle_lbl.set_max_width_chars(1)
 
-    # Append the AspectFrame, NOT the img directly
     card.append(aspect)
     card.append(title_lbl)
     card.append(subtitle_lbl)
