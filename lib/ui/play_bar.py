@@ -1,6 +1,8 @@
+from typing import Optional
+import pathlib
 import logging
 from dataclasses import dataclass, field
-from gi.repository import Gtk, GLib, Adw, Pango
+from gi.repository import Gtk, GLib, Adw, Pango, Gst
 from reactivex.subject import BehaviorSubject
 from reactivex import combine_latest
 
@@ -29,13 +31,11 @@ class PlayerState:
         default_factory=lambda: BehaviorSubject("audio-x-generic-symbolic")
     )
 
-    # Timing
-    current_time: BehaviorSubject[str] = field(
-        default_factory=lambda: BehaviorSubject("0:04")
+    # Timing (Changed to integers for nanoseconds)
+    current_time: BehaviorSubject[int] = field(
+        default_factory=lambda: BehaviorSubject(0)
     )
-    total_time: BehaviorSubject[str] = field(
-        default_factory=lambda: BehaviorSubject("3:09")
-    )
+    total_time: BehaviorSubject[int] = field(default_factory=lambda: BehaviorSubject(0))
 
     # Actions & System
     is_liked: BehaviorSubject[bool] = field(
@@ -51,13 +51,28 @@ class PlayerState:
         default_factory=lambda: BehaviorSubject(False)
     )
 
+    audio_file: BehaviorSubject[Optional[pathlib.Path]] = field(
+        default_factory=lambda: BehaviorSubject[Optional[pathlib.Path]](None)
+    )
 
-# ----------------------------------------------------
-# UI COMPONENT
-# ----------------------------------------------------
+
 def PlayBar(state: PlayerState = PlayerState()) -> Gtk.ActionBar:
-    if state is None:
-        state = PlayerState()
+    """
+    A GStreamer-powered play bar with reactive bindings to the PlayerState.
+    """
+    # Ensure GStreamer is initialized (usually done at app startup)
+    if not Gst.is_initialized():
+        Gst.init(None)
+    # Create a GStream-based play bar with reactive bindings to the PlayerState.
+    _player = Gst.ElementFactory.make("playbin", "player")
+    if not _player:
+        logging.error("Failed to create GStreamer playbin element.")
+        raise RuntimeError("GStreamer initialization failed")
+    player = _player  # Type hint hack
+    flags = player.get_property("flags")
+    # Disable video output since this is an audio player
+    flags &= ~(1 << 0)
+    player.set_property("flags", flags)
 
     play_bar = Gtk.ActionBar()
     play_bar.set_size_request(-1, 80)
@@ -69,6 +84,66 @@ def PlayBar(state: PlayerState = PlayerState()) -> Gtk.ActionBar:
         else:
             widget.remove_css_class(class_name)
 
+    # --- Time Formatting Helper ---
+    def format_time(ns: int) -> str:
+        if ns <= 0:
+            return "0:00"
+        seconds = ns // 1_000_000_000
+        m = seconds // 60
+        s = seconds % 60
+        return f"{m}:{s:02d}"
+
+    def on_audio_file_changed(file_path: Optional[pathlib.Path]):
+        if file_path:
+            player.set_state(Gst.State.READY)
+            player.set_property("uri", file_path.as_uri())
+            if state.playing.value:
+                player.set_state(Gst.State.PLAYING)
+        else:
+            player.set_state(Gst.State.NULL)
+
+    state.audio_file.subscribe(on_audio_file_changed)
+
+    def on_playing_changed(is_playing: bool):
+        if not state.audio_file.value:
+            return
+        player.set_state(Gst.State.PLAYING if is_playing else Gst.State.PAUSED)
+
+    state.playing.subscribe(on_playing_changed)
+
+    def update_time_state():
+        if state.playing.value:
+            # Query position
+            success_pos, pos = player.query_position(Gst.Format.TIME)
+            if success_pos:
+                state.current_time.on_next(pos)
+
+            # Query total duration (only really changes on load, but safe to check)
+            success_dur, dur = player.query_duration(Gst.Format.TIME)
+            if success_dur:
+                state.total_time.on_next(dur)
+        return True  # Return True to keep the timeout alive
+
+    # Poll every 500ms
+    GLib.timeout_add(500, update_time_state)
+    bus = player.get_bus()
+    if not bus:
+        logging.error("Failed to get GStreamer bus.")
+        raise RuntimeError("GStreamer bus initialization failed")
+    bus.add_signal_watch()
+
+    def on_bus_message(bus, message):
+        if message.type == Gst.MessageType.EOS:
+            # Stop playing, reset time to 0, and rewind GStreamer
+            state.playing.on_next(False)
+            state.current_time.on_next(0)
+            player.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, 0)
+        elif message.type == Gst.MessageType.ERROR:
+            err, debug = message.parse_error()
+            logging.error(f"GStreamer Error: {err}, {debug}")
+            state.playing.on_next(False)
+
+    bus.connect("message", on_bus_message)
     # ----------------------------------------------------
     # 1. PLAY CONTROLS (Left)
     # ----------------------------------------------------
@@ -109,7 +184,9 @@ def PlayBar(state: PlayerState = PlayerState()) -> Gtk.ActionBar:
 
     # Combine current and total time streams to update the label
     combine_latest(state.current_time, state.total_time).subscribe(
-        lambda times: time_label.set_text(f"{times[0]} / {times[1]}")
+        lambda times: time_label.set_text(
+            f"{format_time(times[0])} / {format_time(times[1])}"
+        )
     )
 
     controls_box.append(prev_btn)

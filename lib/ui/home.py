@@ -1,3 +1,6 @@
+from typing import cast
+from typing import Any
+from lib.env import CACHE_DIR
 from reactivex import Subject
 from typing import Tuple
 from lib.data import Album, Artist, BaseMedia
@@ -14,6 +17,7 @@ from reactivex.subject import BehaviorSubject
 from pydantic import TypeAdapter
 from pydantic import BaseModel, Field
 from typing import List, Optional
+from lib.ui.play_bar import PlayerState
 
 
 class HomeItemData(BaseMedia):
@@ -45,10 +49,9 @@ HomePageTypeAdapter = TypeAdapter(List[HomeSectionData])
 HomePageType = List[HomeSectionData]
 
 
-from lib.ui.play_bar import PlayerState
-
-
-def HomeItemCard(item: HomeItemData, player_state: PlayerState) -> Gtk.Box:
+def HomeItemCard(
+    item: HomeItemData, player_state: PlayerState, yt: ytmusicapi.YTMusic
+) -> Gtk.Box:
     card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
     card.set_size_request(160, -1)
     card.set_halign(Gtk.Align.START)
@@ -99,14 +102,17 @@ def HomeItemCard(item: HomeItemData, player_state: PlayerState) -> Gtk.Box:
 
     def on_card_click(gesture, n_press, x, y):
         logging.info(f"Clicked on card: {item}")
-        # update the playbar state with this item's info
+
+        # 1. Update UI immediately with what we already have (Immediate Feedback)
         player_state.title.on_next(item.title)
-        # subtitle uses artists/author if available
-        creator = item.artists[0].name if item.artists else (
-            item.author[0].name if item.author else "Unknown"
-        )
+
+        creator = "Unknown"
+        if item.artists:
+            creator = item.artists[0].name
+        elif item.author:
+            creator = item.author[0].name
         player_state.subtitle.on_next(creator)
-        # album art should use the thumbnail url if present
+
         if item.thumbnails:
             thumb_url = (
                 item.thumbnails[-1].url
@@ -114,9 +120,99 @@ def HomeItemCard(item: HomeItemData, player_state: PlayerState) -> Gtk.Box:
                 else item.thumbnails
             )
             player_state.album_art.on_next(thumb_url)
-        else:
-            # fallback to generic icon
-            player_state.album_art.on_next("audio-x-generic-symbolic")
+
+        # 2. Background Fetch for additional details
+        def fetch_details():
+            try:
+                data = None
+                # Check if it's a standard playlist (not a Radio/Mix)
+                if item.playlist_id and not item.playlist_id.startswith("RD"):
+                    logging.info(f"Fetching playlist details for {item.playlist_id}")
+                    data = yt.get_playlist(item.playlist_id)
+
+                # If it's a song/video
+                elif item.video_id:
+                    logging.info(f"Fetching song details for {item.video_id}")
+                    data = yt.get_song(item.video_id)
+
+                if not data:
+                    logging.warning("No additional details found for this item.")
+                    return
+                # If no video ID return
+                if item.video_id is None:
+                    logging.warning("Item has no video ID, cannot fetch details.")
+                    return
+                logging.info("Successfully fetched extra details")
+                # Here you could update the player_state further if 'data'
+                # contains higher quality info (like full lyrics or album name)
+                # log data
+                # logging.debug(f"Fetched data: {data}")
+                # Dump to JSON
+                import json
+
+                with open("debug_fetched_data.json", "w") as f:
+                    json.dump(data, f, indent=4)
+
+                # Try to get the URL of the song
+                url = data["microformat"]["microformatDataRenderer"]["urlCanonical"]
+                logging.info(f"Canonical URL: {url}")
+                # Get actual streaming URL using ytdlp
+                from yt_dlp import YoutubeDL
+
+                download_dir = CACHE_DIR / "songs" / item.video_id
+                download_dir.mkdir(parents=True, exist_ok=True)
+
+                logging.info(f"Downloading media to: {download_dir}")
+
+                params: dict[str, Any] = {
+                    "js_runtimes": {"bun": {}},
+                    "paths": {"home": str(download_dir.absolute())},
+                }
+                marker_file = download_dir / "downloaded.txt"
+
+                # If file doesn't exist, download it. This prevents re-downloading on every click.
+                if not marker_file.exists():
+
+                    with YoutubeDL(
+                        params=cast(
+                            Any,
+                            {
+                                "js_runtimes": {"bun": {}, "node": {}},
+                                "paths": {"home": str(download_dir.absolute())},
+                                "format": "bestaudio/best",  # Prioritize high-quality audio
+                                "noplaylist": True,  # Ensure only the song is downloaded
+                                "quiet": True,  # Reduce console noise if desired
+                            },
+                        )
+                    ) as ydl:
+                        ydl.download([url])
+                        # Create a marker file to indicate this song has been downloaded
+                        marker_file.touch()
+                # Post-download, find the downloaded file (assuming only one new file appears)
+                # And not the marker file
+                downloaded_files = [
+                    f
+                    for f in download_dir.glob("*")
+                    if f.is_file() and f.name != "downloaded.txt"
+                ]
+                # downloaded_files = list(download_dir.glob("*"))
+                if not downloaded_files:
+                    logging.warning(f"No files downloaded to {download_dir}")
+
+                latest_file = max(downloaded_files, key=lambda f: f.stat().st_mtime)
+                logging.info(f"Latest downloaded file: {latest_file}")
+                # This file is usually in a .webm or .m4a format.
+                # set the file
+                player_state.audio_file.on_next(latest_file)
+                # set play to true
+                player_state.playing.on_next(True)
+
+            except Exception as e:
+                # This catches the 'contents' error you saw without crashing the app
+                logging.error(f"Note: Could not fetch additional metadata: {e}")
+
+        # Run the fetch in a thread so the UI doesn't stutter
+        threading.Thread(target=fetch_details, daemon=True).start()
 
     click.connect("pressed", on_card_click)
     card.add_controller(click)
@@ -127,7 +223,9 @@ def HomeItemCard(item: HomeItemData, player_state: PlayerState) -> Gtk.Box:
 # Leave HomeItemCard exactly as you have it!
 
 
-def HomeRow(section: HomeSectionData, player_state: PlayerState) -> tuple[Gtk.Box, Adw.Carousel]:
+def HomeRow(
+    section: HomeSectionData, player_state: PlayerState, yt: ytmusicapi.YTMusic
+) -> tuple[Gtk.Box, Adw.Carousel]:
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
     header = Gtk.Label(label=section.title)
     header.set_halign(Gtk.Align.START)
@@ -141,7 +239,7 @@ def HomeRow(section: HomeSectionData, player_state: PlayerState) -> tuple[Gtk.Bo
     carousel.set_allow_scroll_wheel(False)
 
     for item in section.contents:
-        carousel.append(HomeItemCard(item, player_state))
+        carousel.append(HomeItemCard(item, player_state, yt))
 
     dots = Adw.CarouselIndicatorDots()
     dots.set_carousel(carousel)
@@ -174,11 +272,15 @@ def HomePage(
     row_cache = {}
 
     # Subject payload: (HomePageType data, is_reset boolean)
-    home_page_subject = BehaviorSubject[Tuple[HomePageType, bool]](([], True))
+    home_page_subject = BehaviorSubject[
+        Tuple[HomePageType, bool, Optional[ytmusicapi.YTMusic]]
+    ](([], True, None))
     scroll_subject = Subject()
 
     # Explicit function to satisfy GLib.idle_add
-    def update_ui(home: HomePageType, is_reset: bool) -> bool:
+    def update_ui(
+        home: HomePageType, is_reset: bool, yt: Optional[ytmusicapi.YTMusic]
+    ) -> bool:
         nonlocal is_loading
 
         if is_reset:
@@ -186,6 +288,25 @@ def HomePage(
             while (child := home_box.get_first_child()) is not None:
                 home_box.remove(child)
             row_cache.clear()
+
+        if not yt:
+            logging.warning("First load")
+            spinner_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+            spinner = Adw.Spinner()
+            spinner_box.append(spinner)
+            # spinner_box.append(Gtk.Label(label="Loading..."))
+            label = Gtk.Label(label="Loading...")
+            label.set_halign(Gtk.Align.START)
+            label.set_margin_start(8)
+            # make label bigger
+            label.set_css_classes(["title-2"])
+            spinner_box.append(label)
+            # Make the spinner box centered
+            spinner_box.set_halign(Gtk.Align.CENTER)
+            # Make the spinner bigger
+            spinner.set_size_request(48, 48)
+            home_box.append(spinner_box)
+            return GLib.SOURCE_REMOVE
 
         if len(home) == 0 and is_reset:
             is_loading = False
@@ -202,7 +323,7 @@ def HomePage(
                 if len(section.contents) > current_count:
                     new_items = section.contents[current_count:]
                     for item in new_items:
-                        carousel.append(HomeItemCard(item, player_state))
+                        carousel.append(HomeItemCard(item, player_state, yt))
                     # Update cache with the new count
                     row_cache[section.title] = (
                         section_box,
@@ -211,7 +332,7 @@ def HomePage(
                     )
             else:
                 # CREATE NEW ROW
-                section_box, carousel = HomeRow(section, player_state)
+                section_box, carousel = HomeRow(section, player_state, yt)
                 home_box.append(section_box)
                 row_cache[section.title] = (
                     section_box,
@@ -223,10 +344,12 @@ def HomePage(
         return GLib.SOURCE_REMOVE  # Standard practice for idle_add callbacks
 
     # --- RX CALLBACKS (No lambdas) ---
-    def on_home_data_next(data_tuple: Tuple[HomePageType, bool]):
-        home_data, is_reset = data_tuple
+    def on_home_data_next(
+        data_tuple: Tuple[HomePageType, bool, Optional[ytmusicapi.YTMusic]],
+    ):
+        home_data, is_reset, yt = data_tuple
         # Pass arguments explicitly to avoid lambda wrapping
-        GLib.idle_add(update_ui, home_data, is_reset)
+        GLib.idle_add(update_ui, home_data, is_reset, yt)
 
     def on_rx_error(e):
         logging.error(f"Rx Error: {e}")
@@ -241,10 +364,10 @@ def HomePage(
         try:
             raw_home = yt.get_home(limit=limit)
             home_data = HomePageTypeAdapter.validate_python(raw_home)
-            home_page_subject.on_next((home_data, is_reset))
+            home_page_subject.on_next((home_data, is_reset, yt))
         except Exception as e:
             logging.error(f"Failed to fetch home data: {e}")
-            home_page_subject.on_next(([], is_reset))
+            home_page_subject.on_next(([], is_reset, None))
 
     def trigger_load_more(dummy_value=None):
         nonlocal is_loading, current_limit

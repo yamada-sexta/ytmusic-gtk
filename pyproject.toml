@@ -12,6 +12,7 @@ dependencies = [
     "pygobject>=3.56.0",
     "pywebview>=6.1",
     "reactivex>=4.1.0",
+    "yt-dlp[default]>=2026.2.21",
     "ytmusicapi>=1.11.5",
 ]
 
