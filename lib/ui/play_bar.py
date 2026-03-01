@@ -7,9 +7,6 @@ from reactivex.subject import BehaviorSubject
 from reactivex import combine_latest
 
 
-# ----------------------------------------------------
-# STATE MODEL
-# ----------------------------------------------------
 @dataclass
 class PlayerState:
     """Holds all reactive state for the PlayBar."""
