@@ -39,7 +39,7 @@ from lib.data import ExploreData
 from lib.client import auto_login
 
 log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
+logging.basicConfig(level=logging.DEBUG, format="[%(levelname)s] %(message)s")
 
 
 class YTMusicWindow(Adw.ApplicationWindow):
