@@ -1,5 +1,6 @@
 
 # Constants for cache files
+from pycookiecheat import firefox_cookies
 from pycookiecheat import chrome_cookies
 import ytmusicapi
 from typing import Optional
@@ -32,7 +33,22 @@ def save_cookies(cookies_dict: dict):
         logging.info(f"Cookies saved to {COOKIE_CACHE}")
     except Exception as e:
         logging.error(f"Failed to save cookies: {e}")
-
+def get_cookies_for_url(url: str) -> Optional[dict]:
+    """Extract cookies for a given URL using pycookiecheat."""
+    try:
+        cookies_dict = chrome_cookies(url)
+        if cookies_dict and isinstance(cookies_dict, dict):
+            logging.info(f"Extracted cookies for {url}")
+            return cookies_dict
+        cookies_dict = firefox_cookies(url)
+        if cookies_dict and isinstance(cookies_dict, dict):
+            logging.info(f"Extracted cookies for {url}")
+            return cookies_dict
+        logging.error(f"No cookies found for {url} in either browser.")
+        return None
+    except Exception as e:
+        logging.error(f"Error extracting cookies for {url}: {e}")
+        return None
 
 def auto_login():
     """Automates the login process by extracting cookies from Chrome and bypassing the auth type check.
