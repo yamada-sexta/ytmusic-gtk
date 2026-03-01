@@ -111,7 +111,9 @@ def HomeItemCard(
             creator = item.artists[0].name
         elif item.author:
             creator = item.author[0].name
-        player_state.subtitle.on_next(creator)
+        # player_state.subtitle.on_next(creator)
+        player_state.artist.on_next(creator)
+        player_state.album_name.on_next(item.album.name if item.album else "")
 
         if item.thumbnails:
             thumb_url = (

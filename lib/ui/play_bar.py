@@ -19,12 +19,17 @@ class PlayerState:
     # Track Info
     title: BehaviorSubject[str] = field(
         default_factory=lambda: BehaviorSubject(
-            "サイエンス - Science (feat. KASANE TETO)"
+            "Nothing is playing. Click a song to get started!"
         )
     )
-    subtitle: BehaviorSubject[str] = field(
-        default_factory=lambda: BehaviorSubject("MIMI • Science • 2024")
+    # subtitle: BehaviorSubject[str] = field(
+    #     default_factory=lambda: BehaviorSubject("MIMI • Science • 2024")
+    # )
+    artist: BehaviorSubject[str] = field(default_factory=lambda: BehaviorSubject(""))
+    album_name: BehaviorSubject[str] = field(
+        default_factory=lambda: BehaviorSubject("")
     )
+    year: BehaviorSubject[str] = field(default_factory=lambda: BehaviorSubject(""))
     album_art: BehaviorSubject[str] = field(
         default_factory=lambda: BehaviorSubject("audio-x-generic-symbolic")
     )
@@ -318,7 +323,13 @@ def PlayBar(state: PlayerState = PlayerState()) -> Gtk.Widget:
     state.title.subscribe(
         lambda t: title_label.set_markup(f"<b>{GLib.markup_escape_text(t)}</b>")
     )
-    state.subtitle.subscribe(lambda st: subtitle_label.set_text(st))
+    # state.subtitle.subscribe(lambda st: subtitle_label.set_text(st))
+    # Combine artist, album, and year into a single subtitle line
+    combine_latest(state.artist, state.album_name, state.year).subscribe(
+        lambda info: subtitle_label.set_text(
+            " • ".join(filter(None, info))  # Join non-empty parts with bullets
+        )
+    )
 
     # Toggle highlight on Like/Dislike (Using Adwaita's 'suggested-action' and 'error' classes)
     state.is_liked.subscribe(lambda val: toggle_css(like_btn, "suggested-action", val))

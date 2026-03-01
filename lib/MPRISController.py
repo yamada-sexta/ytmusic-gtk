@@ -68,7 +68,7 @@ class MPRISController:
         # Reactive Bindings: Update GNOME when internal state changes
         self.state.playing.subscribe(self.on_playback_status_changed)
         combine_latest(
-            self.state.title, self.state.subtitle, self.state.total_time
+            self.state.title, self.state.artist, self.state.total_time
         ).subscribe(self.on_metadata_changed)
 
     def handle_method_call(
@@ -149,7 +149,7 @@ class MPRISController:
         return {
             "mpris:trackid": GLib.Variant("s", "/org/mpris/MediaPlayer2/Track/Current"),
             "xesam:title": GLib.Variant("s", self.state.title.value),
-            "xesam:artist": GLib.Variant("as", [self.state.subtitle.value]),
+            "xesam:artist": GLib.Variant("as", [self.state.artist.value]),
             "mpris:length": GLib.Variant("x", length_us),
         }
 
