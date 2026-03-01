@@ -11,7 +11,7 @@ import logging
 from lib.types import YTMusicSubject
 import ytmusicapi
 from typing import Optional
-from gi.repository import Gtk, GLib, Adw, Pango
+from gi.repository import Gtk, GLib, Adw, Pango, Gio, GdkPixbuf, Gdk
 from utils import load_image_async
 from reactivex.subject import BehaviorSubject
 from pydantic import TypeAdapter
@@ -52,10 +52,12 @@ HomePageType = List[HomeSectionData]
 def HomeItemCard(
     item: HomeItemData, player_state: PlayerState, yt: ytmusicapi.YTMusic
 ) -> Gtk.Box:
-    card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+    # Increased spacing from 8 to 12 for better visual breathing room
+    card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
     card.set_size_request(160, -1)
     card.set_halign(Gtk.Align.START)
     card.set_valign(Gtk.Align.START)
+    # Adding native Adwaita rounding classes (requires standard Adwaita stylesheet)
     card.add_css_class("card")
 
     img = Gtk.Picture()
@@ -70,33 +72,39 @@ def HomeItemCard(
         )
         load_image_async(img, thumb_url)
 
-    # 1. CAGE THE IMAGE: Force a strict 1:1 square
     aspect = Gtk.AspectFrame()
     aspect.set_ratio(1.0)
     aspect.set_obey_child(False)
     aspect.set_child(img)
     aspect.set_size_request(160, 160)
+    # Subtle polish: remove the border from the aspect frame so it doesn't look boxy
+    aspect.add_css_class("view")
 
-    # 2. CAGE THE TEXT: Stop the text from stretching the grey card!
+    # Cleaned up typography
+    text_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+
     title_lbl = Gtk.Label(label=item.title)
     title_lbl.set_halign(Gtk.Align.START)
     title_lbl.set_wrap(True)
     title_lbl.set_lines(2)
     title_lbl.set_ellipsize(Pango.EllipsizeMode.END)
-    # This line is the magic fix for the stretching card:
     title_lbl.set_max_width_chars(1)
+    # Make the title pop just a little bit more
+    title_lbl.add_css_class("heading")
 
     creator = item.artists[0].name if item.artists else "Unknown"
     subtitle_lbl = Gtk.Label(label=creator)
     subtitle_lbl.set_halign(Gtk.Align.START)
     subtitle_lbl.add_css_class("dim-label")
+    subtitle_lbl.add_css_class("caption")  # Slightly smaller text for metadata
     subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.END)
-    # Also cage the subtitle:
     subtitle_lbl.set_max_width_chars(1)
 
+    text_box.append(title_lbl)
+    text_box.append(subtitle_lbl)
+
     card.append(aspect)
-    card.append(title_lbl)
-    card.append(subtitle_lbl)
+    card.append(text_box)
 
     click = Gtk.GestureClick.new()
 
@@ -219,6 +227,9 @@ def HomeItemCard(
     click.connect("pressed", on_card_click)
     card.add_controller(click)
 
+    # Optional: Change cursor to pointer on hover to indicate clickability
+    card.set_cursor(Gdk.Cursor.new_from_name("pointer"))
+
     return card
 
 
@@ -260,80 +271,83 @@ def HomePage(
     scrolled = Gtk.ScrolledWindow()
     scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
 
-    home_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=32)
-    home_box.set_margin_top(24)
-    home_box.set_margin_bottom(24)
-    scrolled.set_child(home_box)
+    # 1. THE CLAMP: This makes the UI look premium on widescreen monitors
+    clamp = Adw.Clamp()
+    clamp.set_maximum_size(1000)  # Max width before it centers
+    clamp.set_margin_top(32)
+    clamp.set_margin_bottom(32)
+    clamp.set_margin_start(24)
+    clamp.set_margin_end(24)
+    scrolled.set_child(clamp)
 
-    # --- STATE MANAGEMENT ---
+    home_box = Gtk.Box(
+        orientation=Gtk.Orientation.VERTICAL, spacing=48
+    )  # Increased spacing between rows
+    clamp.set_child(home_box)
+
     current_limit = 5
     is_loading = False
     current_yt_instance = None
-
-    # Cache mapping: section.title -> (Gtk.Box, Adw.Carousel, current_item_count)
     row_cache = {}
 
-    # Subject payload: (HomePageType data, is_reset boolean)
     home_page_subject = BehaviorSubject[
         Tuple[HomePageType, bool, Optional[ytmusicapi.YTMusic]]
     ](([], True, None))
     scroll_subject = Subject()
 
-    # Explicit function to satisfy GLib.idle_add
     def update_ui(
         home: HomePageType, is_reset: bool, yt: Optional[ytmusicapi.YTMusic]
     ) -> bool:
         nonlocal is_loading
 
         if is_reset:
-            # Wipe UI entirely only when switching accounts or reloading from scratch
             while (child := home_box.get_first_child()) is not None:
                 home_box.remove(child)
             row_cache.clear()
 
+        # Beautiful Native Loading State
         if not yt:
-            logging.warning("First load")
-            spinner_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+            loading_page = Adw.StatusPage()
+            loading_page.set_title("Waking up the music...")
+            loading_page.set_description("Connecting to your library")
+
             spinner = Adw.Spinner()
-            spinner_box.append(spinner)
-            # spinner_box.append(Gtk.Label(label="Loading..."))
-            label = Gtk.Label(label="Loading...")
-            label.set_halign(Gtk.Align.START)
-            label.set_margin_start(8)
-            # make label bigger
-            label.set_css_classes(["title-2"])
-            spinner_box.append(label)
-            # Make the spinner box centered
-            spinner_box.set_halign(Gtk.Align.CENTER)
-            # Make the spinner bigger
             spinner.set_size_request(48, 48)
-            home_box.append(spinner_box)
+            spinner.set_halign(Gtk.Align.CENTER)
+            spinner.add_css_class("margin-top-24")  # Push spinner down slightly
+
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+            box.set_valign(Gtk.Align.CENTER)
+            box.set_vexpand(True)
+            box.append(loading_page)
+            box.append(spinner)
+
+            home_box.append(box)
             return GLib.SOURCE_REMOVE
 
+        # Beautiful Native Error State
         if len(home) == 0 and is_reset:
             is_loading = False
-            error_label = Gtk.Label(
-                label="Failed to load data. Please check your login."
-            )
-            home_box.append(error_label)
-            return GLib.SOURCE_REMOVE  # Stop GLib from calling this again
+            error_page = Adw.StatusPage()
+            error_page.set_icon_name("network-error-symbolic")
+            error_page.set_title("Nothing to show")
+            error_page.set_description("Failed to load data. Please check your login.")
+            home_box.append(error_page)
+            return GLib.SOURCE_REMOVE
 
         for section in home:
             if section.title in row_cache:
-                # UPDATE EXISTING ROW: Only append items we haven't rendered yet
                 section_box, carousel, current_count = row_cache[section.title]
                 if len(section.contents) > current_count:
                     new_items = section.contents[current_count:]
                     for item in new_items:
                         carousel.append(HomeItemCard(item, player_state, yt))
-                    # Update cache with the new count
                     row_cache[section.title] = (
                         section_box,
                         carousel,
                         len(section.contents),
                     )
             else:
-                # CREATE NEW ROW
                 section_box, carousel = HomeRow(section, player_state, yt)
                 home_box.append(section_box)
                 row_cache[section.title] = (
@@ -343,7 +357,7 @@ def HomePage(
                 )
 
         is_loading = False
-        return GLib.SOURCE_REMOVE  # Standard practice for idle_add callbacks
+        return GLib.SOURCE_REMOVE
 
     # --- RX CALLBACKS (No lambdas) ---
     def on_home_data_next(
