@@ -121,7 +121,7 @@ class HomeSection(BaseModel):
 
 # Since the root of the Home data is a List (not a dictionary),
 # we use TypeAdapter just like you did for History.
-HomePage = TypeAdapter(List[HomeSection])
+HomePageTypeAdapter = TypeAdapter(List[HomeSection])
 
 # Get type of HomePage for type hinting
 HomePageType = List[HomeSection]

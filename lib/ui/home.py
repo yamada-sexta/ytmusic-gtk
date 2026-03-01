@@ -1,8 +1,8 @@
+from lib.data import HomePageTypeAdapter
 from lib.data import HomeItem
 from lib.data import HomeSection
 import threading
 from lib.data import HomePageType
-from lib.data import HomePage
 import logging
 import logging
 from lib.types import YTMusicSubject
@@ -100,6 +100,7 @@ def home_page_section(section: HomeSection) -> Gtk.Box:
 def create_home_page(
     yt_subject: YTMusicSubject,
 ) -> Gtk.ScrolledWindow:
+
     scrolled = Gtk.ScrolledWindow()
     scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
 
@@ -181,7 +182,7 @@ def create_home_page(
         try:
             # Network calls MUST be off the main GTK thread
             raw_home = yt.get_home(limit=limit)
-            home_data = HomePage.validate_python(raw_home)
+            home_data = HomePageTypeAdapter.validate_python(raw_home)
             # Emitting to the subject will trigger update_ui via GLib.idle_add
             home_page_subject.on_next(home_data)
         except Exception as e:

@@ -1,3 +1,4 @@
+from lib.ui.play_bar import PlayBar
 import ytmusicapi
 from reactivex.subject import BehaviorSubject
 from lib.types import YTMusicSubject
@@ -74,10 +75,11 @@ class YTMusicWindow(Adw.ApplicationWindow):
             "explore", "Explore", "find-location-symbolic"
         )
 
-        self.build_play_bar()
-        main_box.append(self.play_bar)
+        # self.build_play_bar()
 
-        self.now_playing_title.set_label("Loading data...")
+        main_box.append(PlayBar())
+
+        # self.now_playing_title.set_label("Loading data...")
         self.fetch_data_async(yt_subject)
 
     def create_empty_list_page(
@@ -102,7 +104,6 @@ class YTMusicWindow(Adw.ApplicationWindow):
                 yt = auto_login()
 
                 if not yt:
-                    GLib.idle_add(self.now_playing_title.set_label, "Login Failed")
                     return
                 yt_subject.on_next(yt)
                 # raw_home = yt.get_home(limit=5)
@@ -114,7 +115,6 @@ class YTMusicWindow(Adw.ApplicationWindow):
                 GLib.idle_add(self.populate_ui, explore_data)
             except Exception as e:
                 logging.error(f"Error fetching data: {e}")
-                GLib.idle_add(self.now_playing_title.set_label, "Error loading data")
 
         thread = threading.Thread(target=task, daemon=True)
         thread.start()
@@ -132,72 +132,41 @@ class YTMusicWindow(Adw.ApplicationWindow):
 
         for release in explore_data.new_releases:
             creator = release.artists[0].name if release.artists else "Unknown"
-            row = Adw.ActionRow(
-                title=release.title, subtitle=f"{creator} • {release.type}"
-            )
+            # row = Adw.ActionRow(
+            #     title=release.title, subtitle=f"{creator} • {release.type}"
+            # )
 
-            play_btn = Gtk.Button(icon_name="media-playback-start-symbolic")
-            play_btn.set_valign(Gtk.Align.CENTER)
-            play_btn.add_css_class("circular")
-            play_btn.add_css_class("flat")
-            play_btn.connect("clicked", self.on_track_play_clicked, release.title)
+            # play_btn = Gtk.Button(icon_name="media-playback-start-symbolic")
+            # play_btn.set_valign(Gtk.Align.CENTER)
+            # play_btn.add_css_class("circular")
+            # play_btn.add_css_class("flat")
+            # play_btn.connect("clicked", self.on_track_play_clicked, release.title)
 
-            row.add_suffix(play_btn)
-            self.explore_list.append(row)
+            # row.add_suffix(play_btn)
+            # self.explore_list.append(row)
 
-    def build_play_bar(self) -> None:
-        self.play_bar = Gtk.ActionBar()
+    # def on_track_play_clicked(
+    #     self, button: Optional[Gtk.Button], track_name: str
+    # ) -> None:
+    #     self.now_playing_title.set_label(track_name)
+    #     player.set_state(Gst.State.NULL)
 
-        info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        info_box.set_valign(Gtk.Align.CENTER)
-        self.now_playing_title = Gtk.Label(label="Not Playing")
-        self.now_playing_title.set_halign(Gtk.Align.START)
-        self.now_playing_title.add_css_class("heading")
-        info_box.append(self.now_playing_title)
-        self.play_bar.pack_start(info_box)
+    #     sample_audio_url = (
+    #         "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+    #     )
+    #     player.set_property("uri", sample_audio_url)
 
-        controls_box = Gtk.Box(spacing=10)
-        controls_box.set_valign(Gtk.Align.CENTER)
+    #     player.set_state(Gst.State.PLAYING)
+    #     self.play_pause_btn.set_icon_name("media-playback-pause-symbolic")
 
-        prev_btn = Gtk.Button(icon_name="media-skip-backward-symbolic")
-        prev_btn.add_css_class("circular")
-
-        self.play_pause_btn = Gtk.Button(icon_name="media-playback-start-symbolic")
-        self.play_pause_btn.add_css_class("circular")
-        self.play_pause_btn.add_css_class("suggested-action")
-        self.play_pause_btn.connect("clicked", self.on_play_pause_toggled)
-
-        next_btn = Gtk.Button(icon_name="media-skip-forward-symbolic")
-        next_btn.add_css_class("circular")
-
-        controls_box.append(prev_btn)
-        controls_box.append(self.play_pause_btn)
-        controls_box.append(next_btn)
-
-        self.play_bar.set_center_widget(controls_box)
-
-    def on_track_play_clicked(
-        self, button: Optional[Gtk.Button], track_name: str
-    ) -> None:
-        self.now_playing_title.set_label(track_name)
-        player.set_state(Gst.State.NULL)
-
-        sample_audio_url = (
-            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
-        )
-        player.set_property("uri", sample_audio_url)
-
-        player.set_state(Gst.State.PLAYING)
-        self.play_pause_btn.set_icon_name("media-playback-pause-symbolic")
-
-    def on_play_pause_toggled(self, button: Gtk.Button) -> None:
-        player_state = player.get_state(0)[1]
-        if player_state != Gst.State.PLAYING:
-            player.set_state(Gst.State.PLAYING)
-            self.play_pause_btn.set_icon_name("media-playback-pause-symbolic")
-        else:
-            player.set_state(Gst.State.PAUSED)
-            self.play_pause_btn.set_icon_name("media-playback-start-symbolic")
+    # def on_play_pause_toggled(self, button: Gtk.Button) -> None:
+    #     player_state = player.get_state(0)[1]
+    #     if player_state != Gst.State.PLAYING:
+    #         player.set_state(Gst.State.PLAYING)
+    #         self.play_pause_btn.set_icon_name("media-playback-pause-symbolic")
+    #     else:
+    #         player.set_state(Gst.State.PAUSED)
+    #         self.play_pause_btn.set_icon_name("media-playback-start-symbolic")
 
 
 class YTMusicApp(Adw.Application):
