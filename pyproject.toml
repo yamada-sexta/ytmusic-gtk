@@ -10,6 +10,7 @@ dependencies = [
     "pydantic>=2.12.5",
     "pygobject>=3.56.0",
     "pywebview>=6.1",
+    "reactivex>=4.1.0",
     "ytmusicapi>=1.11.5",
 ]
 
