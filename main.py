@@ -1,3 +1,4 @@
+from utils import load_image_async
 from typing import Optional
 from data import HomePageType
 import logging
@@ -5,7 +6,6 @@ import os
 import sys
 import subprocess
 import threading
-import urllib.request
 
 # --- macOS Homebrew & Virtual Environment Fix ---
 try:
@@ -36,27 +36,6 @@ from client import auto_login
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
-
-
-def load_image_async(image_widget, url):
-    """Fetches an image from a URL in the background and updates the widget."""
-
-    def fetch():
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            response = urllib.request.urlopen(req)
-            data = response.read()
-
-            # Convert network bytes to a GTK Texture
-            stream = Gio.MemoryInputStream.new_from_bytes(GLib.Bytes.new(data))
-            pixbuf = GdkPixbuf.Pixbuf.new_from_stream(stream, None)
-            if pixbuf:
-                texture = Gdk.Texture.new_for_pixbuf(pixbuf)
-                GLib.idle_add(image_widget.set_paintable, texture)
-        except Exception as e:
-            logging.debug(f"Failed to load image {url}: {e}")
-
-    threading.Thread(target=fetch, daemon=True).start()
 
 
 class YTMusicWindow(Adw.ApplicationWindow):
@@ -154,7 +133,7 @@ class YTMusicWindow(Adw.ApplicationWindow):
         thread = threading.Thread(target=task, daemon=True)
         thread.start()
 
-    def populate_ui(self, home_data: HomePageType, explore_data: ExploreData):
+    def populate_ui(self, home_data: HomePageType, explore_data: ExploreData) -> None:
         self.now_playing_title.set_label("Ready")
 
         # --- Populate Home Page (Cards & Carousels) ---
@@ -256,7 +235,7 @@ class YTMusicWindow(Adw.ApplicationWindow):
             row.add_suffix(play_btn)
             self.explore_list.append(row)
 
-    def build_play_bar(self):
+    def build_play_bar(self) -> None:
         self.play_bar = Gtk.ActionBar()
 
         info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -287,7 +266,9 @@ class YTMusicWindow(Adw.ApplicationWindow):
 
         self.play_bar.set_center_widget(controls_box)
 
-    def on_track_play_clicked(self, button: Optional[Gtk.Button], track_name: str):
+    def on_track_play_clicked(
+        self, button: Optional[Gtk.Button], track_name: str
+    ) -> None:
         if not self.player:
             logging.warning("Player not initialized (on_track_play_clicked)")
             return
@@ -303,7 +284,7 @@ class YTMusicWindow(Adw.ApplicationWindow):
         self.is_playing = True
         self.play_pause_btn.set_icon_name("media-playback-pause-symbolic")
 
-    def on_play_pause_toggled(self, button: Gtk.Button):
+    def on_play_pause_toggled(self, button: Gtk.Button) -> None:
         if not self.player:
             logging.warning("Player not initialized (on_play_pause_toggled)")
             return
