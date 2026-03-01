@@ -1,6 +1,6 @@
 from lib.data import HomePageTypeAdapter
-from lib.data import HomeItem
-from lib.data import HomeSection
+from lib.data import HomeItemData
+from lib.data import HomeSectionData
 import threading
 from lib.data import HomePageType
 import logging
@@ -13,7 +13,7 @@ from utils import load_image_async
 from reactivex.subject import BehaviorSubject
 
 
-def home_item_card(item: HomeItem) -> Gtk.Box:
+def HomeItemCard(item: HomeItemData) -> Gtk.Box:
     card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
     card.set_size_request(160, -1)
     card.set_halign(Gtk.Align.START)
@@ -71,7 +71,7 @@ def home_item_card(item: HomeItem) -> Gtk.Box:
     return card
 
 
-def home_page_section(section: HomeSection) -> Gtk.Box:
+def HomeRow(section: HomeSectionData) -> Gtk.Box:
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
     header = Gtk.Label(label=section.title)
     header.set_halign(Gtk.Align.START)
@@ -85,8 +85,7 @@ def home_page_section(section: HomeSection) -> Gtk.Box:
     carousel.set_allow_scroll_wheel(True)
 
     for item in section.contents:
-        card = home_item_card(item)
-        carousel.append(card)
+        carousel.append(HomeItemCard(item))
 
     dots = Adw.CarouselIndicatorDots()
     dots.set_carousel(carousel)
@@ -114,7 +113,7 @@ def create_home_page(
     is_loading = False
     current_yt_instance = None
 
-    def on_edge_reached(sw, pos):
+    def on_edge_reached(sw: Gtk.ScrolledWindow, pos: Gtk.PositionType):
         nonlocal is_loading, current_limit, current_yt_instance
 
         # Check if the edge we hit is the bottom
@@ -162,7 +161,7 @@ def create_home_page(
             return
         logging.info(f"Updating UI with {len(home)} sections.")
         for section in home:
-            section_box = home_page_section(section)
+            section_box = HomeRow(section)
             home_box.append(section_box)
 
         is_loading = False

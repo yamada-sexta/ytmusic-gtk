@@ -98,7 +98,7 @@ class History(BaseModel):
 Songs = TypeAdapter(List[Song])
 
 
-class HomeItem(BaseMedia):
+class HomeItemData(BaseMedia):
     # Tracks & Quick Picks
     playlist_id: Optional[str] = Field(None, alias="playlistId")
     views: Optional[str] = None
@@ -114,14 +114,14 @@ class HomeItem(BaseMedia):
     author: Optional[List[Artist]] = None
 
 
-class HomeSection(BaseModel):
+class HomeSectionData(BaseModel):
     title: str
-    contents: List[HomeItem]
+    contents: List[HomeItemData]
 
 
 # Since the root of the Home data is a List (not a dictionary),
 # we use TypeAdapter just like you did for History.
-HomePageTypeAdapter = TypeAdapter(List[HomeSection])
+HomePageTypeAdapter = TypeAdapter(List[HomeSectionData])
 
 # Get type of HomePage for type hinting
-HomePageType = List[HomeSection]
+HomePageType = List[HomeSectionData]

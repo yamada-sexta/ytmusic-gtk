@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "aiohttp[speedups]>=3.13.3",
     "browser-cookie3>=0.20.1",
     "pycookiecheat>=0.8.0",
     "pydantic>=2.12.5",
