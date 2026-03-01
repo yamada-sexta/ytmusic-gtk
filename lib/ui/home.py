@@ -20,8 +20,6 @@ def create_home_page(
     home_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=32)
     home_box.set_margin_top(24)
     home_box.set_margin_bottom(24)
-    # home_box.set_margin_start(24)
-    # home_box.set_margin_end(24)
     scrolled.set_child(home_box)
 
     def update_ui(home: HomePageType):
