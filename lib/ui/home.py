@@ -125,7 +125,7 @@ def HomeRow(section: HomeSectionData) -> tuple[Gtk.Box, Adw.Carousel]:
 
     carousel = Adw.Carousel()
     carousel.set_spacing(16)
-    carousel.set_allow_scroll_wheel(True)
+    carousel.set_allow_scroll_wheel(False)
 
     for item in section.contents:
         carousel.append(HomeItemCard(item))
