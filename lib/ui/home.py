@@ -52,6 +52,10 @@ HomePageType = List[HomeSectionData]
 def HomeItemCard(
     item: HomeItemData, player_state: PlayerState, yt: ytmusicapi.YTMusic
 ) -> Gtk.Box:
+    """
+    Creates a card widget for a single item in the Home page.
+    This is used for both songs and playlists, with some conditional logic based on available data.
+    """
     # Increased spacing from 8 to 12 for better visual breathing room
     card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
     card.set_size_request(160, -1)
@@ -108,7 +112,7 @@ def HomeItemCard(
 
     click = Gtk.GestureClick.new()
 
-    def on_card_click(gesture, n_press, x, y):
+    def on_card_click(gesture: Gtk.GestureClick, n_press: int, x: float, y: float):
         logging.info(f"Clicked on card: {item}")
 
         # 1. Update UI immediately with what we already have (Immediate Feedback)
@@ -239,6 +243,10 @@ def HomeItemCard(
 def HomeRow(
     section: HomeSectionData, player_state: PlayerState, yt: ytmusicapi.YTMusic
 ) -> tuple[Gtk.Box, Adw.Carousel]:
+    """
+    Creates a horizontal carousel row for a given Home section, including the header and the carousel itself.
+    Returns both the container box and the carousel so that we can append new items later if needed.
+    """
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
     header = Gtk.Label(label=section.title)
     header.set_halign(Gtk.Align.START)
@@ -268,6 +276,11 @@ def HomePage(
     yt_subject: YTMusicSubject,
     player_state: PlayerState,
 ) -> Gtk.ScrolledWindow:
+    """
+    Builds the Home page UI, which consists of multiple sections (e.g. "Recently Played", "Recommended Mixes").
+    Each section is rendered as a HomeRow with a header and a horizontal carousel of HomeItemCards.
+    The page also implements infinite scrolling by listening to the scroll position and fetching more data when the user reaches the bottom.
+    """
     scrolled = Gtk.ScrolledWindow()
     scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
 
