@@ -9,7 +9,7 @@ This primary skill provides the core architectural context and programming guide
 
 ## Core Technologies
 
-- **UI Framework:** GTK4 with LibAdw (via `pygobject` bindings).
+- **UI Framework:** This project uses GTK4 with LibAdw (via `pygobject` bindings). However, it doesn't strictly follows the development guidelines of GNOME.
 - **Python Version:** Python >= 3.13 (Targeting the absolute latest modern standards).
 - **State Management:** ReactiveX (using the `reactivex` library).
 
