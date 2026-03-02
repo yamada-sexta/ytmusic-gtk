@@ -61,30 +61,35 @@ class YTMusicWindow(Adw.ApplicationWindow):
         root_toolbar_view = Adw.ToolbarView()
         self.set_content(root_toolbar_view)
 
-        # Add the PlayBar to the bottom of the root container
+        # The PlayBar is securely fastened to the bottom of the window
         root_toolbar_view.add_bottom_bar(PlayBar(self.player_state))
 
         # ---------------------------------------------------------
-        # 2. NAVIGATION VIEW (Handles page transitions)
+        # 2. THE ANIMATED STACK (Slides up/down between Main and Now Playing)
         # ---------------------------------------------------------
-        self.nav_view = Adw.NavigationView()
-        root_toolbar_view.set_content(self.nav_view)
+        self.main_stack = Gtk.Stack()
+
+        # Change SLIDE_UP_DOWN to OVER_UP_DOWN
+        self.main_stack.set_transition_type(Gtk.StackTransitionType.OVER_UP_DOWN)
+        self.main_stack.set_transition_duration(350)  # 350ms smooth transition
+
+        # Set the stack as the content ABOVE the PlayBar
+        root_toolbar_view.set_content(self.main_stack)
 
         # ---------------------------------------------------------
-        # 3. MAIN APP VIEW (Your existing Home/Explore stack)
+        # 3. MAIN APP VIEW (Home/Explore/Search)
         # ---------------------------------------------------------
         main_toolbar_view = Adw.ToolbarView()
         main_toolbar_view.set_top_bar_style(Adw.ToolbarStyle.FLAT)
 
-        self.stack = Adw.ViewStack()
-        self.switcher = Adw.ViewSwitcher()
-        self.switcher.set_stack(self.stack)
-        self.switcher.set_policy(Adw.ViewSwitcherPolicy.WIDE)
+        self.view_stack = Adw.ViewStack()
+        self.switcher = Adw.ViewSwitcher(
+            stack=self.view_stack, policy=Adw.ViewSwitcherPolicy.WIDE
+        )
 
         header = Adw.HeaderBar()
         header.set_title_widget(self.switcher)
 
-        # (Header buttons logic...)
         self.search_btn = Gtk.ToggleButton(
             icon_name="system-search-symbolic", tooltip_text="Search"
         )
@@ -105,57 +110,37 @@ class YTMusicWindow(Adw.ApplicationWindow):
         main_toolbar_view.add_top_bar(self.search_bar)
 
         # Add pages to your ViewStack
-        main_toolbar_view.set_content(self.stack)
-        self.stack.add_titled_with_icon(
+        main_toolbar_view.set_content(self.view_stack)
+        self.view_stack.add_titled_with_icon(
             HomePage(yt_subject, self.player_state), "home", "Home", "go-home-symbolic"
         )
-        self.stack.add_titled_with_icon(
+        self.view_stack.add_titled_with_icon(
             ExplorePage(yt_subject), "explore", "Explore", "compass2-symbolic"
         )
-        self.stack.add_titled_with_icon(
+        self.view_stack.add_titled_with_icon(
             Gtk.Label(label="Library Coming Soon!"),
             "library",
             "Library",
             "library-symbolic",
         )
 
-        # Package the Main View into a Navigation Page
-        main_page = Adw.NavigationPage.new(main_toolbar_view, "Main")
-        main_page.set_tag("main")
-        self.nav_view.add(main_page)
+        # Add the completed Main View to the Stack
+        self.main_stack.add_named(main_toolbar_view, "main")
 
         # ---------------------------------------------------------
         # 4. DETAIL PAGE (Now Playing)
         # ---------------------------------------------------------
-        detail_view = create_now_playing_view(self.player_state)
-        now_playing_page = Adw.NavigationPage.new(detail_view, "Now Playing")
-        now_playing_page.set_tag("now_playing")
-        self.nav_view.add(now_playing_page)
+        now_playing_view = create_now_playing_view(self.player_state)
+        self.main_stack.add_named(now_playing_view, "now_playing")
 
         # ---------------------------------------------------------
         # 5. REACTIVE NAVIGATION LOGIC
         # ---------------------------------------------------------
-        # Push/Pop based on the RxPY Subject
         def on_nav_state_changed(show: bool):
-            page = self.nav_view.get_visible_page()
-            if not page:
-                return
-            visible_tag = page.get_tag()
-            if show and visible_tag != "now_playing":
-                GLib.idle_add(self.nav_view.push_by_tag, "now_playing")
-            elif not show and visible_tag == "now_playing":
-                GLib.idle_add(self.nav_view.pop)
+            target = "now_playing" if show else "main"
+            GLib.idle_add(self.main_stack.set_visible_child_name, target)
 
         self.player_state.show_now_playing.subscribe(on_nav_state_changed)
-
-        # Sync state if user clicks the native `<` back button
-        def on_visible_page_changed(*args):
-            page = self.nav_view.get_visible_page()
-            if page and page.get_tag() == "main":
-                if self.player_state.show_now_playing.value:
-                    self.player_state.show_now_playing.on_next(False)
-
-        self.nav_view.connect("notify::visible-page", on_visible_page_changed)
 
         self.fetch_data_async(yt_subject)
 

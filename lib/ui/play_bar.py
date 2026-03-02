@@ -418,9 +418,19 @@ def PlayBar(state: PlayerState = PlayerState()) -> Gtk.Widget:
 
     expand_btn = Gtk.Button(icon_name="pan-up-symbolic")
     expand_btn.add_css_class("flat")
+    # Change the icon to a "pan-down-symbolic" when active to indicate it can be collapsed
+    state.show_now_playing.subscribe(
+        lambda val: expand_btn.set_icon_name(
+            "pan-down-symbolic" if val else "pan-up-symbolic"
+        )
+    )
 
-    expand_btn.connect("clicked", lambda *_: state.show_now_playing.on_next(True))
-
+    # expand_btn.connect("clicked", lambda *_: state.show_now_playing.on_next(True))
+    #   FIXED: Toggle the show_now_playing state to allow collapsing as well
+    expand_btn.connect(
+        "clicked",
+        lambda *_: state.show_now_playing.on_next(not state.show_now_playing.value),
+    )
     right_box.append(vol_btn)
     right_box.append(repeat_btn)
     right_box.append(shuffle_btn)
