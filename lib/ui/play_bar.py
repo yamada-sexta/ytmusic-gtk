@@ -59,6 +59,10 @@ class PlayerState:
     audio_file: BehaviorSubject[Optional[pathlib.Path]] = field(
         default_factory=lambda: BehaviorSubject[Optional[pathlib.Path]](None)
     )
+    # Just a place holder for now.
+    show_now_playing: BehaviorSubject[bool] = field(
+        default_factory=lambda: BehaviorSubject(False)
+    )
 
 
 def PlayBar(state: PlayerState = PlayerState()) -> Gtk.Widget:
@@ -414,6 +418,8 @@ def PlayBar(state: PlayerState = PlayerState()) -> Gtk.Widget:
 
     expand_btn = Gtk.Button(icon_name="pan-up-symbolic")
     expand_btn.add_css_class("flat")
+
+    expand_btn.connect("clicked", lambda *_: state.show_now_playing.on_next(True))
 
     right_box.append(vol_btn)
     right_box.append(repeat_btn)

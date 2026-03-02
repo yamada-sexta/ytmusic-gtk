@@ -1,3 +1,5 @@
+from lib.ui.play_view import create_now_playing_view
+from lib.ui.search_bar import create_search_bar
 import logging
 from pathlib import Path
 import ytmusicapi
@@ -51,10 +53,28 @@ class YTMusicWindow(Adw.ApplicationWindow):
         self.set_default_size(900, 700)
         self.set_title("YT Music")
 
-        # Use ToolbarView with FLAT style
-        toolbar_view = Adw.ToolbarView()
-        toolbar_view.set_top_bar_style(Adw.ToolbarStyle.FLAT)
-        self.set_content(toolbar_view)
+        self.player_state = PlayerState()
+
+        # ---------------------------------------------------------
+        # 1. ROOT CONTAINER (Anchors the PlayBar globally)
+        # ---------------------------------------------------------
+        root_toolbar_view = Adw.ToolbarView()
+        self.set_content(root_toolbar_view)
+
+        # Add the PlayBar to the bottom of the root container
+        root_toolbar_view.add_bottom_bar(PlayBar(self.player_state))
+
+        # ---------------------------------------------------------
+        # 2. NAVIGATION VIEW (Handles page transitions)
+        # ---------------------------------------------------------
+        self.nav_view = Adw.NavigationView()
+        root_toolbar_view.set_content(self.nav_view)
+
+        # ---------------------------------------------------------
+        # 3. MAIN APP VIEW (Your existing Home/Explore stack)
+        # ---------------------------------------------------------
+        main_toolbar_view = Adw.ToolbarView()
+        main_toolbar_view.set_top_bar_style(Adw.ToolbarStyle.FLAT)
 
         self.stack = Adw.ViewStack()
         self.switcher = Adw.ViewSwitcher()
@@ -64,66 +84,28 @@ class YTMusicWindow(Adw.ApplicationWindow):
         header = Adw.HeaderBar()
         header.set_title_widget(self.switcher)
 
-        # ---------------------------------------------------------
-        # Header: Left Side (Search)
-        # ---------------------------------------------------------
-        self.search_btn = Gtk.ToggleButton()
-        self.search_btn.set_icon_name("system-search-symbolic")
-        self.search_btn.set_tooltip_text("Search")
+        # (Header buttons logic...)
+        self.search_btn = Gtk.ToggleButton(
+            icon_name="system-search-symbolic", tooltip_text="Search"
+        )
         header.pack_start(self.search_btn)
 
-        # ---------------------------------------------------------
-        # Header: Right Side (Hamburger Menu)
-        # ---------------------------------------------------------
-        # 1. Create the menu model
         menu = Gio.Menu()
-        menu.append("Preferences", "app.preferences")  # Dummy action for future use
+        menu.append("Preferences", "app.preferences")
         menu.append("About YT Music", "app.about")
-
-        # 2. Create the menu button
-        self.menu_btn = Gtk.MenuButton()
-        self.menu_btn.set_icon_name("open-menu-symbolic")
-        self.menu_btn.set_menu_model(menu)
-        self.menu_btn.set_tooltip_text("Main Menu")
-        header.pack_end(self.menu_btn)
-        # ---------------------------------------------------------
-
-        # Add header to the ToolbarView
-        toolbar_view.add_top_bar(header)
-
-        # --- Search Bar Width Setup using Adw.Clamp ---
-        self.search_bar = Gtk.SearchBar()
-        self.search_entry = Gtk.SearchEntry()
-        self.search_entry.set_placeholder_text("Search songs, artists, or albums...")
-        self.search_entry.set_hexpand(True)
-
-        clamp = Adw.Clamp()
-        clamp.set_maximum_size(450)
-        clamp.set_child(self.search_entry)
-
-        self.search_bar.set_child(clamp)
-        self.search_bar.connect_entry(self.search_entry)
-        self.search_bar.set_key_capture_widget(self)
-
-        self.search_bar.bind_property(
-            "search-mode-enabled",
-            self.search_btn,
-            "active",
-            GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE,
+        self.menu_btn = Gtk.MenuButton(
+            icon_name="open-menu-symbolic", menu_model=menu, tooltip_text="Main Menu"
         )
+        header.pack_end(self.menu_btn)
 
-        self.search_entry.connect("activate", self.on_search_activated)
+        main_toolbar_view.add_top_bar(header)
 
-        # Stack the search bar directly under the header bar
-        toolbar_view.add_top_bar(self.search_bar)
+        # Search bar setup
+        self.search_bar = create_search_bar(self, self.search_btn)
+        main_toolbar_view.add_top_bar(self.search_bar)
 
-        # --- Main Content ---
-        toolbar_view.set_content(self.stack)
-        self.stack.set_vexpand(True)
-
-        self.player_state = PlayerState()
-
-        # Build specific UI containers
+        # Add pages to your ViewStack
+        main_toolbar_view.set_content(self.stack)
         self.stack.add_titled_with_icon(
             HomePage(yt_subject, self.player_state), "home", "Home", "go-home-symbolic"
         )
@@ -137,16 +119,45 @@ class YTMusicWindow(Adw.ApplicationWindow):
             "library-symbolic",
         )
 
-        # --- native bottom bar handling for the playbar ---
-        toolbar_view.add_bottom_bar(PlayBar(self.player_state))
+        # Package the Main View into a Navigation Page
+        main_page = Adw.NavigationPage.new(main_toolbar_view, "Main")
+        main_page.set_tag("main")
+        self.nav_view.add(main_page)
+
+        # ---------------------------------------------------------
+        # 4. DETAIL PAGE (Now Playing)
+        # ---------------------------------------------------------
+        detail_view = create_now_playing_view(self.player_state)
+        now_playing_page = Adw.NavigationPage.new(detail_view, "Now Playing")
+        now_playing_page.set_tag("now_playing")
+        self.nav_view.add(now_playing_page)
+
+        # ---------------------------------------------------------
+        # 5. REACTIVE NAVIGATION LOGIC
+        # ---------------------------------------------------------
+        # Push/Pop based on the RxPY Subject
+        def on_nav_state_changed(show: bool):
+            page = self.nav_view.get_visible_page()
+            if not page:
+                return
+            visible_tag = page.get_tag()
+            if show and visible_tag != "now_playing":
+                GLib.idle_add(self.nav_view.push_by_tag, "now_playing")
+            elif not show and visible_tag == "now_playing":
+                GLib.idle_add(self.nav_view.pop)
+
+        self.player_state.show_now_playing.subscribe(on_nav_state_changed)
+
+        # Sync state if user clicks the native `<` back button
+        def on_visible_page_changed(*args):
+            page = self.nav_view.get_visible_page()
+            if page and page.get_tag() == "main":
+                if self.player_state.show_now_playing.value:
+                    self.player_state.show_now_playing.on_next(False)
+
+        self.nav_view.connect("notify::visible-page", on_visible_page_changed)
 
         self.fetch_data_async(yt_subject)
-
-    def on_search_activated(self, entry: Gtk.SearchEntry):
-        query = entry.get_text()
-        if not query.strip():
-            return
-        logging.info(f"User searched for: {query}")
 
     def fetch_data_async(self, yt_subject: YTMusicSubject):
         def task():
