@@ -17,9 +17,11 @@ This primary skill provides the core architectural context and programming guide
 
 - Provide **maximum possible type hinting** for all classes, arguments, returns, and variables.
 - Utilize modern Python type-hinting features available in 3.13:
-  - Use `|` instead of `Union` or `Optional` (e.g., `str | None`).
+  - Use `|` instead of `Union`.
+  - Use `Optional[T]` instead of `T | None`.
   - Use built-in generic collections (e.g., `list[str]`, `dict[str, int]`, `tuple[int, ...]`) instead of importing from `typing`.
   - Use Python 3.12+ type parameter syntax (`class MyClass[T]:` or `def generic_func[T](arg: T) -> T:`) for generic definitions.
+  - New code MUST pass type checking.
 
 ## Functional & Reactive State Management
 
@@ -42,5 +44,5 @@ This primary skill provides the core architectural context and programming guide
 ## Comment Style
 
 - **Avoid Counting** - Do not use `1.`, `2.`, `3.` etc. in comments. Use simple single line comments instead.
-- **Avoid Deleting Comment** Do not delete unnecessary comments. Even if the comment is not useful, keep it.
+- **Avoid Deleting Comment** Do not delete unnecessary comments. Even if the comment is not useful, keep it. If it doesn't follow the style guideline, adapt the comment instead of removing it.
 - **Avoid Commenting Obvious Code** Do not comment obvious code. If the code is self-explanatory, do not comment it.
