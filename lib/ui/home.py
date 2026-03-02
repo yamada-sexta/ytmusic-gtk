@@ -115,7 +115,7 @@ def HomeItemCard(
     play_spinner.set_valign(Gtk.Align.CENTER)
     play_spinner.set_hexpand(True)
     play_spinner.set_vexpand(True)
-    play_spinner.set_size_request(24, 24)
+    play_spinner.set_size_request(32, 32)
 
     play_stack = Gtk.Stack()
     play_stack.add_named(play_icon, "icon")
@@ -213,24 +213,14 @@ def HomeItemCard(
         # We are going to create a new current music object
         # Set to loading
         player_state.state.on_next(PlayState.LOADING)
-        # 1. Update UI immediately with what we already have (Immediate Feedback)
-        # player_state.title.on_next(item.title)
-        # # Set id
-        # if item.video_id:
-        #     player_state.id.on_next(item.video_id)
-        # it item doesn't have a video id, we can't play it
         if not item.video_id:
             logging.warning("Item has no video ID, cannot play.")
+            player_state.state.on_next(PlayState.EMPTY)
             return
         title = "Unknown"
         if item.title:
             title = item.title
         video_id = item.video_id
-
-        # year = "Unknown"
-        # if item.album and item.album.year:
-        #     year = item.album.year
-
         creator = "Unknown"
         if item.artists:
             creator = item.artists[0].name
@@ -246,16 +236,16 @@ def HomeItemCard(
                 if isinstance(item.thumbnails, list)
                 else item.thumbnails
             )
-            current = {
-                "title": BehaviorSubject(title),
-                "id": BehaviorSubject(video_id),
-                "artist": BehaviorSubject(creator),
-                "album_name": BehaviorSubject(album_name),
-                "album_art": BehaviorSubject(thumb_url),
-                "current_time": BehaviorSubject(0),
-                "total_time": BehaviorSubject(0),
-                "seek_request": Subject(),
-            }
+        new_music = CurrentMusic(
+            id=video_id,
+            title=title,
+            artist=creator,
+            album_name=album_name,
+            album_art=thumb_url,
+            is_liked=BehaviorSubject(False),
+            is_disliked=BehaviorSubject(False),
+        )
+        player_state.current.on_next(new_music)
 
         # 2. Background Fetch for additional details
         def fetch_details():
@@ -299,10 +289,6 @@ def HomeItemCard(
 
                 logging.info(f"Downloading media to: {download_dir}")
 
-                params: dict[str, Any] = {
-                    "js_runtimes": {"bun": {}},
-                    "paths": {"home": str(download_dir.absolute())},
-                }
                 marker_file = download_dir / "downloaded.txt"
 
                 # If file doesn't exist, download it. This prevents re-downloading on every click.
@@ -336,19 +322,7 @@ def HomeItemCard(
                 latest_file = max(downloaded_files, key=lambda f: f.stat().st_mtime)
                 logging.info(f"Latest downloaded file: {latest_file}")
                 # set the file
-                player_state.current.on_next(
-                    CurrentMusic(
-                        id=video_id,
-                        audio_file=BehaviorSubject(latest_file),
-                        title=title,
-                        artist=creator,
-                        album_name=album_name,
-                        year=None,
-                        album_art=thumb_url,
-                        is_liked=BehaviorSubject(False),
-                        is_disliked=BehaviorSubject(False),
-                    )
-                )
+                new_music.audio_file.on_next(latest_file)
                 # set play to true
                 player_state.state.on_next(PlayState.PLAYING)
 
