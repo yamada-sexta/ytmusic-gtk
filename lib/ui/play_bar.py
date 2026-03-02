@@ -36,7 +36,9 @@ def ProgressBar(
         progress_scale.set_value(current_ns / 1e9)
         is_updating_scale = False
 
-    combine_latest(state.current_time, state.total_time).subscribe(update_progress_ui)
+    combine_latest(
+        state.current_song.current_time, state.current_song.total_time
+    ).subscribe(update_progress_ui)
 
     def on_scale_changed(scale: Gtk.Scale) -> None:
         if is_updating_scale:
@@ -44,7 +46,7 @@ def ProgressBar(
 
         val_seconds = scale.get_value()
         new_pos_ns = int(val_seconds * 1e9)
-        state.seek_request.on_next(new_pos_ns)
+        state.current_song.seek_request.on_next(new_pos_ns)
 
     progress_scale.connect("value-changed", on_scale_changed)
 
@@ -120,7 +122,9 @@ def PlayControls(state: PlayerState) -> Gtk.Widget:
 
     play_pause_btn.connect("clicked", toggle_play)
 
-    combine_latest(state.current_time, state.total_time).subscribe(
+    combine_latest(
+        state.current_song.current_time, state.current_song.total_time
+    ).subscribe(
         lambda times: time_label.set_text(
             f"{format_time(times[0])} / {format_time(times[1])}"
         )
@@ -169,7 +173,7 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
 
     dislike_btn = Gtk.Button(icon_name="thumbs-down-outline-symbolic")
     dislike_btn.add_css_class("flat")
-    state.is_disliked.subscribe(
+    state.current_song.is_disliked.subscribe(
         lambda val: toggle_icon(
             dislike_btn, val, "thumbs-down-symbolic", "thumbs-down-outline-symbolic"
         )
@@ -177,7 +181,7 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
 
     like_btn = Gtk.Button(icon_name="thumbs-up-outline-symbolic")
     like_btn.add_css_class("flat")
-    state.is_liked.subscribe(
+    state.current_song.is_liked.subscribe(
         lambda val: toggle_icon(
             like_btn, val, "thumbs-up-symbolic", "thumbs-up-outline-symbolic"
         )
@@ -206,21 +210,29 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
         else:
             album_art.set_from_icon_name(value)
 
-    state.album_art.subscribe(_on_album_art_change)
+    state.current_song.album_art.subscribe(_on_album_art_change)
 
-    state.title.subscribe(
+    state.current_song.title.subscribe(
         lambda t: title_label.set_markup(f"<b>{GLib.markup_escape_text(t)}</b>")
     )
 
-    combine_latest(state.artist, state.album_name, state.year).subscribe(
-        lambda info: subtitle_label.set_text(" • ".join(filter(None, info)))
-    )
+    combine_latest(
+        state.current_song.artist,
+        state.current_song.album_name,
+        state.current_song.year,
+    ).subscribe(lambda info: subtitle_label.set_text(" • ".join(filter(None, info))))
 
     like_btn.connect(
-        "clicked", lambda _: state.is_liked.on_next(not state.is_liked.value)
+        "clicked",
+        lambda _: state.current_song.is_liked.on_next(
+            not state.current_song.is_liked.value
+        ),
     )
     dislike_btn.connect(
-        "clicked", lambda _: state.is_disliked.on_next(not state.is_disliked.value)
+        "clicked",
+        lambda _: state.current_song.is_disliked.on_next(
+            not state.current_song.is_disliked.value
+        ),
     )
 
     def update_song_info_sensitivity(s: PlayState) -> None:

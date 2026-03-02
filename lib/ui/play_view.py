@@ -58,7 +58,7 @@ def create_now_playing_view(
     def update_artist(artist: str):
         GLib.idle_add(artist_label.set_text, artist)
 
-    state.title.subscribe(update_title)
-    state.artist.subscribe(update_artist)
+    state.current_song.title.subscribe(update_title)
+    state.current_song.artist.subscribe(update_artist)
 
     return view

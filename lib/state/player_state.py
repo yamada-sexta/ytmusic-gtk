@@ -3,11 +3,12 @@ from typing import Protocol
 import enum
 import logging
 import pathlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Optional
 
 from gi.repository import GLib, Gst
 from reactivex.subject import BehaviorSubject, Subject
+from reactivex import operators as ops
 
 from lib.sys.MPRISController import MPRISController
 
@@ -39,13 +40,7 @@ class CurrentMusic(Protocol):
 
 
 @dataclass
-class PlayerState:
-    """Holds all reactive state and playing logic for the app."""
-
-    state: BehaviorSubject[PlayState] = field(
-        default_factory=lambda: BehaviorSubject(PlayState.EMPTY)
-    )
-
+class CurrentMusicState:
     id: BehaviorSubject[Optional[str]] = field(
         default_factory=lambda: BehaviorSubject[Optional[str]](None)
     )
@@ -71,18 +66,10 @@ class PlayerState:
     )
     total_time: BehaviorSubject[int] = field(default_factory=lambda: BehaviorSubject(0))
 
-    # Actions & System
-    volume: BehaviorSubject[float] = field(default_factory=lambda: BehaviorSubject(1.0))
     is_liked: BehaviorSubject[bool] = field(
         default_factory=lambda: BehaviorSubject(False)
     )
     is_disliked: BehaviorSubject[bool] = field(
-        default_factory=lambda: BehaviorSubject(False)
-    )
-    shuffle_on: BehaviorSubject[bool] = field(
-        default_factory=lambda: BehaviorSubject(False)
-    )
-    repeat_on: BehaviorSubject[bool] = field(
         default_factory=lambda: BehaviorSubject(False)
     )
 
@@ -91,6 +78,26 @@ class PlayerState:
     )
 
     seek_request: Subject[int] = field(default_factory=Subject)
+
+
+@dataclass
+class PlayerState:
+    """Holds all reactive state and playing logic for the app."""
+
+    state: BehaviorSubject[PlayState] = field(
+        default_factory=lambda: BehaviorSubject(PlayState.EMPTY)
+    )
+
+    current_song: CurrentMusicState = field(default_factory=CurrentMusicState)
+
+    # Actions & System
+    volume: BehaviorSubject[float] = field(default_factory=lambda: BehaviorSubject(1.0))
+    shuffle_on: BehaviorSubject[bool] = field(
+        default_factory=lambda: BehaviorSubject(False)
+    )
+    repeat_on: BehaviorSubject[bool] = field(
+        default_factory=lambda: BehaviorSubject(False)
+    )
 
 
 def setup_player(state: PlayerState) -> tuple[Gst.Element, MPRISController]:
@@ -124,11 +131,19 @@ def setup_player(state: PlayerState) -> tuple[Gst.Element, MPRISController]:
         else:
             player.set_state(Gst.State.NULL)
 
-    state.audio_file.subscribe(on_audio_file_changed)
+    state.current_song.pipe(
+        ops.map(lambda s: s.audio_file if s else None), ops.distinct_until_changed()
+    ).subscribe(on_audio_file_changed)
 
     def on_state_changed(s: PlayState) -> None:
-        if not state.audio_file.value:
+        has_audio = state.current_song.value and state.current_song.value.audio_file
+        if not has_audio:
+            if s == PlayState.EMPTY:
+                player.set_state(Gst.State.NULL)
+                state.current_time.on_next(0)
+                state.total_time.on_next(0)
             return
+
         if s == PlayState.PLAYING:
             player.set_state(Gst.State.PLAYING)
         elif s == PlayState.PAUSED or s == PlayState.LOADING:

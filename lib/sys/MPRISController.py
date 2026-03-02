@@ -89,6 +89,8 @@ class MPRISController:
         invocation: Gio.DBusMethodInvocation,
     ) -> None:
         """Handles incoming commands from GNOME (e.g. Media Keys)."""
+        from lib.state.player_state import PlayState
+
         if interface_name == "org.mpris.MediaPlayer2.Player":
             if method_name == "PlayPause":
                 current = self.state.state.value
@@ -116,6 +118,8 @@ class MPRISController:
         property_name: str,
     ) -> Optional[GLib.Variant]:
         """Tells GNOME the current state of our player."""
+        from lib.state.player_state import PlayState
+
         if interface_name == "org.mpris.MediaPlayer2":
             if property_name == "Identity":
                 return GLib.Variant("s", "YTMusic GTK")
@@ -159,12 +163,12 @@ class MPRISController:
     def get_metadata(self) -> Dict[str, GLib.Variant]:
         """Constructs the MPRIS Metadata dictionary."""
         # MPRIS length expects microseconds. GStreamer yields nanoseconds.
-        length_us: int = self.state.total_time.value // 1000
+        length_us: int = self.state.current_song.total_time.value // 1000
 
         return {
             "mpris:trackid": GLib.Variant("s", "/org/mpris/MediaPlayer2/Track/Current"),
-            "xesam:title": GLib.Variant("s", self.state.title.value),
-            "xesam:artist": GLib.Variant("as", [self.state.artist.value]),
+            "xesam:title": GLib.Variant("s", self.state.current_song.title.value),
+            "xesam:artist": GLib.Variant("as", [self.state.current_song.artist.value]),
             "mpris:length": GLib.Variant("x", length_us),
         }
 
