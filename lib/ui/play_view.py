@@ -67,8 +67,10 @@ def create_now_playing_view(
             return
         # update_title(current.title)
         # update_artist(current.artist)
-        current.title.subscribe(update_title)
-        current.artist.subscribe(update_artist)
+        # current.title.subscribe(update_title)
+        # current.artist.subscribe(update_artist)
+        update_title(current.title)
+        update_artist(current.artist)
 
     state.current.subscribe(on_current)
 

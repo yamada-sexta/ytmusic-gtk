@@ -227,6 +227,10 @@ def HomeItemCard(
             title = item.title
         video_id = item.video_id
 
+        # year = "Unknown"
+        # if item.album and item.album.year:
+        #     year = item.album.year
+
         creator = "Unknown"
         if item.artists:
             creator = item.artists[0].name
@@ -252,8 +256,6 @@ def HomeItemCard(
                 "total_time": BehaviorSubject(0),
                 "seek_request": Subject(),
             }
-
-            player_state.current.on_next(CurrentMusic(**current))
 
         # 2. Background Fetch for additional details
         def fetch_details():
@@ -334,7 +336,19 @@ def HomeItemCard(
                 latest_file = max(downloaded_files, key=lambda f: f.stat().st_mtime)
                 logging.info(f"Latest downloaded file: {latest_file}")
                 # set the file
-                player_state.audio_file.on_next(latest_file)
+                player_state.current.on_next(
+                    CurrentMusic(
+                        id=video_id,
+                        audio_file=latest_file,
+                        title=title,
+                        artist=creator,
+                        album_name=album_name,
+                        year=None,
+                        album_art=thumb_url,
+                        is_liked=False,
+                        is_disliked=False,
+                    )
+                )
                 # set play to true
                 player_state.state.on_next(PlayState.PLAYING)
 
@@ -362,7 +376,14 @@ def HomeItemCard(
         GLib.idle_add(do_update)
 
     # Listen for changes in the player state ID
-    player_state.id.subscribe(on_next=update_playing_state)
+    # player_state.id.subscribe(on_next=update_playing_state)
+    def on_current_changed(current: Optional[CurrentMusic]) -> None:
+        if current and current.id:
+            update_playing_state(current.id)
+        else:
+            update_playing_state(None)
+
+    player_state.current.subscribe(on_current_changed)
     return card
 
 

@@ -4,6 +4,7 @@ import typing
 from typing import Optional, Any, Dict, Tuple
 from gi.repository import Gio, GLib
 from reactivex import combine_latest
+from reactivex import operators as ops
 
 if typing.TYPE_CHECKING:
     from lib.ui.play_bar import PlayerState
@@ -59,12 +60,12 @@ def setup_mpris_controller(state: "PlayerState") -> None:
             return {}
         current = state.current.value
         # MPRIS length expects microseconds. GStreamer yields nanoseconds.
-        length_us: int = current.total_time.value // 1000
+        length_us: int = state.stream.total_time.value // 1000
 
         return {
             "mpris:trackid": GLib.Variant("s", "/org/mpris/MediaPlayer2/Track/Current"),
-            "xesam:title": GLib.Variant("s", current.title.value),
-            "xesam:artist": GLib.Variant("as", [current.artist.value]),
+            "xesam:title": GLib.Variant("s", current.title),
+            "xesam:artist": GLib.Variant("as", [current.artist]),
             "mpris:length": GLib.Variant("x", length_us),
         }
 
@@ -190,13 +191,20 @@ def setup_mpris_controller(state: "PlayerState") -> None:
             {"Metadata": GLib.Variant("a{sv}", get_metadata())},
         )
 
+    # def on_current_changed(current: Optional["CurrentMusic"]) -> None:
+    #     if not current:
+    #         return
+    #     combine_latest(
+    #         current.title,
+    #         current.artist,
+    #         state.stream.total_time,
+    #     ).subscribe(on_metadata_changed)
     def on_current_changed(current: Optional["CurrentMusic"]) -> None:
         if not current:
             return
         combine_latest(
-            current.title,
-            current.artist,
-            current.total_time,
+            state.current.pipe(ops.filter(lambda c: c is not None)),
+            state.stream.total_time,
         ).subscribe(on_metadata_changed)
 
     # Attach listeners to the state
