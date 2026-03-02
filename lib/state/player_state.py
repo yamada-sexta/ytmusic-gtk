@@ -40,47 +40,6 @@ class CurrentMusic(Protocol):
 
 
 @dataclass
-class CurrentMusicState:
-    id: BehaviorSubject[Optional[str]] = field(
-        default_factory=lambda: BehaviorSubject[Optional[str]](None)
-    )
-
-    # Track Info
-    title: BehaviorSubject[str] = field(
-        default_factory=lambda: BehaviorSubject(
-            "Nothing is playing. Click a song to get started!"
-        )
-    )
-    artist: BehaviorSubject[str] = field(default_factory=lambda: BehaviorSubject(""))
-    album_name: BehaviorSubject[str] = field(
-        default_factory=lambda: BehaviorSubject("")
-    )
-    year: BehaviorSubject[str] = field(default_factory=lambda: BehaviorSubject(""))
-    album_art: BehaviorSubject[str] = field(
-        default_factory=lambda: BehaviorSubject("audio-x-generic-symbolic")
-    )
-
-    # Timing (Changed to integers for nanoseconds)
-    current_time: BehaviorSubject[int] = field(
-        default_factory=lambda: BehaviorSubject(0)
-    )
-    total_time: BehaviorSubject[int] = field(default_factory=lambda: BehaviorSubject(0))
-
-    is_liked: BehaviorSubject[bool] = field(
-        default_factory=lambda: BehaviorSubject(False)
-    )
-    is_disliked: BehaviorSubject[bool] = field(
-        default_factory=lambda: BehaviorSubject(False)
-    )
-
-    audio_file: BehaviorSubject[Optional[pathlib.Path]] = field(
-        default_factory=lambda: BehaviorSubject[Optional[pathlib.Path]](None)
-    )
-
-    seek_request: Subject[int] = field(default_factory=Subject)
-
-
-@dataclass
 class PlayerState:
     """Holds all reactive state and playing logic for the app."""
 
@@ -88,7 +47,9 @@ class PlayerState:
         default_factory=lambda: BehaviorSubject(PlayState.EMPTY)
     )
 
-    current_song: CurrentMusicState = field(default_factory=CurrentMusicState)
+    current_song: BehaviorSubject[Optional[CurrentMusic]] = field(
+        default_factory=lambda: BehaviorSubject[Optional[CurrentMusic]](None)
+    )
 
     # Actions & System
     volume: BehaviorSubject[float] = field(default_factory=lambda: BehaviorSubject(1.0))
