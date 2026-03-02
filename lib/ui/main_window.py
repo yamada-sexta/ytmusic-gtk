@@ -1,3 +1,5 @@
+import ytmusicapi
+from typing import Optional
 import threading
 from lib.ui.play_view import create_now_playing_view
 from lib.ui.search_bar import create_search_bar
@@ -16,14 +18,15 @@ from gi.repository import Gtk, Adw, Gst, GLib, Pango, Gio, GdkPixbuf, Gdk, GObje
 from lib.ui.explore import ExplorePage
 from lib.ui.play_bar import PlayBar, PlayerState
 from lib.state.player_state import setup_player
-from lib.types import YTMusicSubject
 from lib.ui.home import HomePage
 from lib.net.client import auto_login
 
 
 class YTMusicWindow(Adw.ApplicationWindow):
 
-    def __init__(self, yt_subject: YTMusicSubject, **kwargs):
+    def __init__(
+        self, yt_subject: BehaviorSubject[Optional[ytmusicapi.YTMusic]], **kwargs
+    ):
         super().__init__(**kwargs)
         logging.info("Initializing YT Music App UI...")
         self.set_default_size(900, 700)
@@ -32,9 +35,7 @@ class YTMusicWindow(Adw.ApplicationWindow):
         self.player_state = PlayerState()
         self._player = setup_player(self.player_state)
 
-        # ---------------------------------------------------------
-        # 1. ROOT CONTAINER (Anchors the PlayBar globally)
-        # ---------------------------------------------------------
+        # ROOT CONTAINER (Anchors the PlayBar globally)
         root_toolbar_view = Adw.ToolbarView()
         self.set_content(root_toolbar_view)
 
@@ -43,9 +44,7 @@ class YTMusicWindow(Adw.ApplicationWindow):
         # The PlayBar is securely fastened to the bottom of the window
         root_toolbar_view.add_bottom_bar(PlayBar(self.player_state, show_now_playing))
 
-        # ---------------------------------------------------------
-        # 2. THE ANIMATED STACK (Slides up/down between Main and Now Playing)
-        # ---------------------------------------------------------
+        # The animated stack (Slides up/down between Main and Now Playing)
         self.main_stack = Gtk.Stack()
 
         # Change SLIDE_UP_DOWN to OVER_UP_DOWN
@@ -55,9 +54,7 @@ class YTMusicWindow(Adw.ApplicationWindow):
         # Set the stack as the content ABOVE the PlayBar
         root_toolbar_view.set_content(self.main_stack)
 
-        # ---------------------------------------------------------
-        # 3. MAIN APP VIEW (Home/Explore/Search)
-        # ---------------------------------------------------------
+        # MAIN APP VIEW (Home/Explore/Search)
         main_toolbar_view = Adw.ToolbarView()
         main_toolbar_view.set_top_bar_style(Adw.ToolbarStyle.FLAT)
 
@@ -106,17 +103,13 @@ class YTMusicWindow(Adw.ApplicationWindow):
         # Add the completed Main View to the Stack
         self.main_stack.add_named(main_toolbar_view, "main")
 
-        # ---------------------------------------------------------
-        # 4. DETAIL PAGE (Now Playing)
-        # ---------------------------------------------------------
+        # DETAIL PAGE (Now Playing)
         now_playing_view = create_now_playing_view(
             self.player_state, show_now_playing=show_now_playing
         )
         self.main_stack.add_named(now_playing_view, "now_playing")
 
-        # ---------------------------------------------------------
-        # 5. REACTIVE NAVIGATION LOGIC
-        # ---------------------------------------------------------
+        # REACTIVE NAVIGATION LOGIC
         def on_nav_state_changed(show: bool):
             target = "now_playing" if show else "main"
             GLib.idle_add(self.main_stack.set_visible_child_name, target)
@@ -125,7 +118,9 @@ class YTMusicWindow(Adw.ApplicationWindow):
 
         self.fetch_data_async(yt_subject)
 
-    def fetch_data_async(self, yt_subject: YTMusicSubject):
+    def fetch_data_async(
+        self, yt_subject: BehaviorSubject[Optional[ytmusicapi.YTMusic]]
+    ):
         def task():
             try:
                 yt = auto_login()

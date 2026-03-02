@@ -2,4 +2,4 @@
 import ytmusicapi
 from reactivex.subject import BehaviorSubject
 
-YTMusicSubject = BehaviorSubject[ytmusicapi.YTMusic | None]
+# YTMusicSubject = BehaviorSubject[ytmusicapi.YTMusic | None]

@@ -1,16 +1,11 @@
 from lib.state.player_state import CurrentMusic
 from utils import load_thumbnail
-from typing import cast
-from typing import Any
-from lib.sys.env import CACHE_DIR
 from reactivex import Subject
 from typing import Tuple
 from lib.data import Album, Artist, BaseMedia
 from reactivex import operators as ops
 import threading
 import logging
-import logging
-from lib.types import YTMusicSubject
 import ytmusicapi
 from typing import Optional
 from gi.repository import Gtk, GLib, Adw, Pango, Gio, GdkPixbuf, Gdk
@@ -324,7 +319,7 @@ def HomeRow(
 
 
 def HomePage(
-    yt_subject: YTMusicSubject,
+    yt_subject: BehaviorSubject[Optional[ytmusicapi.YTMusic]],
     player_state: PlayerState,
 ) -> Gtk.ScrolledWindow:
     """
@@ -344,14 +339,28 @@ def HomePage(
     clamp.set_margin_end(24)
     scrolled.set_child(clamp)
 
+    main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+    clamp.set_child(main_box)
+
     home_box = Gtk.Box(
         orientation=Gtk.Orientation.VERTICAL, spacing=48
     )  # Increased spacing between rows
-    clamp.set_child(home_box)
+    main_box.append(home_box)
 
-    current_limit = 5
-    is_loading = False
-    current_yt_instance = None
+    bottom_spinner_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+    bottom_spinner_box.set_margin_top(24)
+    bottom_spinner_box.set_margin_bottom(24)
+    bottom_spinner = Adw.Spinner()
+    bottom_spinner.set_size_request(32, 32)
+    bottom_spinner.set_halign(Gtk.Align.CENTER)
+    bottom_spinner_box.append(bottom_spinner)
+    bottom_spinner_box.set_visible(False)
+    main_box.append(bottom_spinner_box)
+
+    current_limit = BehaviorSubject(5)
+    is_loading = BehaviorSubject(False)
+    has_more = BehaviorSubject(True)
+    # current_yt_instance = BehaviorSubject[Optional[ytmusicapi.YTMusic]](None)
     row_cache = {}
 
     home_page_subject = BehaviorSubject[
@@ -362,12 +371,12 @@ def HomePage(
     def update_ui(
         home: HomePageType, is_reset: bool, yt: Optional[ytmusicapi.YTMusic]
     ) -> bool:
-        nonlocal is_loading
 
         if is_reset:
             while (child := home_box.get_first_child()) is not None:
                 home_box.remove(child)
             row_cache.clear()
+            has_more.on_next(True)
 
         # Beautiful Native Loading State
         if not yt:
@@ -391,7 +400,7 @@ def HomePage(
 
         # Beautiful Native Error State
         if len(home) == 0 and is_reset:
-            is_loading = False
+            is_loading.on_next(False)
             error_page = Adw.StatusPage()
             error_page.set_icon_name("network-error-symbolic")
             error_page.set_title("Nothing to show")
@@ -420,7 +429,12 @@ def HomePage(
                     len(section.contents),
                 )
 
-        is_loading = False
+        bottom_spinner_box.set_visible(False)
+        is_loading.on_next(False)
+
+        if yt and len(home) < current_limit.value:
+            has_more.on_next(False)
+
         return GLib.SOURCE_REMOVE
 
     # --- RX CALLBACKS (No lambdas) ---
@@ -452,16 +466,26 @@ def HomePage(
             home_page_subject.on_next((home_data, is_reset, yt))
         except Exception as e:
             logging.error(f"Failed to fetch home data: {e}")
-            home_page_subject.on_next(([], is_reset, None))
+            if is_reset:
+                home_page_subject.on_next(([], is_reset, None))
+            else:
+                home_page_subject.on_next(([], False, yt))
 
     def trigger_load_more(dummy_value=None):
-        nonlocal is_loading, current_limit
+        if is_loading.value:
+            return
         logging.info("Fetching more data...")
-        is_loading = True
-        current_limit += 5
+        is_loading.on_next(True)
+        bottom_spinner_box.set_visible(True)
+        new_limit = current_limit.value + 5
+        current_limit.on_next(new_limit)
         threading.Thread(
             target=fetch_home_data,
-            args=(current_yt_instance, current_limit, False),  # False = don't reset UI
+            args=(
+                yt_subject.value,
+                new_limit,
+                False,
+            ),  # False = don't reset UI
             daemon=True,
         ).start()
 
@@ -472,26 +496,23 @@ def HomePage(
     scrolled.connect("edge-reached", on_edge_reached)
 
     def check_scroll_valid(dummy_value) -> bool:
-        return not is_loading and current_yt_instance is not None
+        return not is_loading.value and yt_subject.value is not None and has_more.value
 
     scroll_subject.pipe(ops.filter(check_scroll_valid)).subscribe(
         on_next=trigger_load_more, on_error=on_rx_error
     )
 
     def on_yt_changed(yt: Optional[ytmusicapi.YTMusic]):
-        nonlocal current_yt_instance, is_loading, current_limit
-        current_yt_instance = yt
-
         if yt is None:
             logging.info("YT Music instance is None, showing error message.")
             return
 
-        current_limit = 5
-        is_loading = True
+        current_limit.on_next(5)
+        is_loading.on_next(True)
 
         # FIXED: Added the explicit `True` argument for `is_reset`
         threading.Thread(
-            target=fetch_home_data, args=(yt, current_limit, True), daemon=True
+            target=fetch_home_data, args=(yt, current_limit.value, True), daemon=True
         ).start()
 
     yt_subject.subscribe(on_next=on_yt_changed, on_error=on_rx_error)

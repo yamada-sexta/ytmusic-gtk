@@ -9,7 +9,6 @@ import logging
 from lib.data import PodcastInfo
 from lib.data import Album
 from lib.data import BaseMedia
-from lib.types import YTMusicSubject
 from gi.repository import Gtk, Adw, GLib, Pango, Gdk, GdkPixbuf
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -461,7 +460,7 @@ def MoodsAndGenresBadges(moods: List[MoodAndGenre]) -> Gtk.Box:
 
 
 def ExplorePage(
-    yt_subject: YTMusicSubject,
+    yt_subject: BehaviorSubject[Optional[ytmusicapi.YTMusic]],
 ) -> Gtk.ScrolledWindow:
     scrolled = Gtk.ScrolledWindow()
     scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
