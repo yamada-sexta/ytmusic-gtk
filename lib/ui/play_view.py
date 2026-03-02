@@ -1,8 +1,11 @@
+from reactivex.subject import BehaviorSubject
 from lib.ui.play_bar import PlayerState
 from gi.repository import Gtk, Adw, GLib, GObject
 
 
-def create_now_playing_view(state: PlayerState) -> Gtk.Widget:
+def create_now_playing_view(
+    state: PlayerState, show_now_playing: BehaviorSubject[bool]
+) -> Gtk.Widget:
     """
     Functional component for the Detail 'Now Playing' view.
     """
@@ -24,7 +27,7 @@ def create_now_playing_view(state: PlayerState) -> Gtk.Widget:
     close_btn.set_tooltip_text("Close Now Playing")
 
     # Reactively tell the state to close this view
-    close_btn.connect("clicked", lambda *_: state.show_now_playing.on_next(False))
+    close_btn.connect("clicked", lambda *_: show_now_playing.on_next(False))
     header.pack_start(close_btn)
 
     view.add_top_bar(header)

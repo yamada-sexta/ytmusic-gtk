@@ -101,26 +101,46 @@ def HomeItemCard(
     play_box.set_visible(False)  # Hidden by default
 
     # Add the icon inside the box
-    icon_name = (
-        "media-playback-pause-symbolic"
-        if player_state.state.value == PlayState.PLAYING
-        else "media-playback-start-symbolic"
-    )
-    play_icon = Gtk.Image.new_from_icon_name(icon_name)
+    play_icon = Gtk.Image()
     play_icon.set_icon_size(Gtk.IconSize.LARGE)
     play_icon.set_halign(Gtk.Align.CENTER)
     play_icon.set_valign(Gtk.Align.CENTER)
     play_icon.set_hexpand(True)
     play_icon.set_vexpand(True)
-    player_state.state.subscribe(
-        lambda state: play_icon.set_from_icon_name(
-            "media-playback-pause-symbolic"
-            if state == PlayState.PLAYING
-            else "media-playback-start-symbolic"
-        )
-    )
 
-    play_box.append(play_icon)
+    play_spinner = Adw.Spinner() if hasattr(Adw, "Spinner") else Gtk.Spinner()
+    play_spinner.set_halign(Gtk.Align.CENTER)
+    play_spinner.set_valign(Gtk.Align.CENTER)
+    play_spinner.set_hexpand(True)
+    play_spinner.set_vexpand(True)
+    play_spinner.set_size_request(32, 32)
+
+    play_stack = Gtk.Stack()
+    play_stack.add_named(play_icon, "icon")
+    play_stack.add_named(play_spinner, "spinner")
+
+    def update_play_icon(state: PlayState):
+        def do_update_icon():
+            if state == PlayState.LOADING:
+                if hasattr(play_spinner, "start"):
+                    play_spinner.start()
+                play_stack.set_visible_child_name("spinner")
+            else:
+                if hasattr(play_spinner, "stop"):
+                    play_spinner.stop()
+                play_icon.set_from_icon_name(
+                    "media-playback-pause-symbolic"
+                    if state == PlayState.PLAYING
+                    else "media-playback-start-symbolic"
+                )
+                play_stack.set_visible_child_name("icon")
+            return GLib.SOURCE_REMOVE
+
+        GLib.idle_add(do_update_icon)
+
+    player_state.state.subscribe(update_play_icon)
+
+    play_box.append(play_stack)
     overlay.add_overlay(play_box)
 
     text_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
@@ -174,6 +194,19 @@ def HomeItemCard(
     def on_card_click(gesture: Gtk.GestureClick, n_press: int, x: float, y: float):
         logging.info(f"Clicked on card: {item}")
 
+        if item.video_id and player_state.id.value == item.video_id:
+            current_state = player_state.state.value
+            if current_state == PlayState.PLAYING:
+                player_state.state.on_next(PlayState.PAUSED)
+                return
+            elif current_state == PlayState.PAUSED:
+                player_state.state.on_next(PlayState.PLAYING)
+                return
+            elif current_state == PlayState.LOADING:
+                return
+
+        # Set to loading
+        player_state.state.on_next(PlayState.LOADING)
         # 1. Update UI immediately with what we already have (Immediate Feedback)
         player_state.title.on_next(item.title)
         # Set id
@@ -227,8 +260,6 @@ def HomeItemCard(
 
                 with open("debug_fetched_data.json", "w") as f:
                     json.dump(data, f, indent=4)
-                # Set to loading
-                player_state.state.on_next(PlayState.LOADING)
                 # Try to get the URL of the song
                 url = data["microformat"]["microformatDataRenderer"]["urlCanonical"]
                 logging.info(f"Canonical URL: {url}")

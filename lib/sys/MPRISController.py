@@ -7,8 +7,8 @@ from reactivex import combine_latest
 
 if typing.TYPE_CHECKING:
     from lib.ui.play_bar import PlayerState
+    from lib.state.player_state import PlayState
 
-from lib.state.player_state import PlayState
 
 # This XML defines the D-Bus API contract GNOME expects from your player
 MPRIS_XML: str = """
@@ -170,8 +170,10 @@ class MPRISController:
 
     # --- PropertiesChanged Signal Emitters ---
 
-    def on_playback_status_changed(self, play_state: PlayState) -> None:
+    def on_playback_status_changed(self, play_state: "PlayState") -> None:
         """Reactive callback triggered by RxPY subject."""
+        from lib.state.player_state import PlayState
+
         status: str = "Playing" if play_state == PlayState.PLAYING else "Paused"
         self._emit_properties_changed(
             "org.mpris.MediaPlayer2.Player",

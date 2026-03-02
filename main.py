@@ -37,6 +37,7 @@ gi.require_version("Gdk", "4.0")
 from gi.repository import Gtk, Adw, Gst, GLib, Pango, Gio, GdkPixbuf, Gdk, GObject
 from lib.ui.explore import ExplorePage
 from lib.ui.play_bar import PlayBar, PlayerState
+from lib.state.player_state import setup_player
 from lib.types import YTMusicSubject
 from lib.ui.home import HomePage
 from lib.net.client import auto_login
@@ -54,6 +55,7 @@ class YTMusicWindow(Adw.ApplicationWindow):
         self.set_title("YT Music")
 
         self.player_state = PlayerState()
+        self._player, self._mpris = setup_player(self.player_state)
 
         # ---------------------------------------------------------
         # 1. ROOT CONTAINER (Anchors the PlayBar globally)
@@ -132,7 +134,9 @@ class YTMusicWindow(Adw.ApplicationWindow):
         # ---------------------------------------------------------
         # 4. DETAIL PAGE (Now Playing)
         # ---------------------------------------------------------
-        now_playing_view = create_now_playing_view(self.player_state)
+        now_playing_view = create_now_playing_view(
+            self.player_state, show_now_playing=show_now_playing
+        )
         self.main_stack.add_named(now_playing_view, "now_playing")
 
         # ---------------------------------------------------------

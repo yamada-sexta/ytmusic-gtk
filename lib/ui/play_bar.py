@@ -4,7 +4,6 @@ from lib.ui.helpers import toggle_icon
 from lib.ui.helpers import format_time
 from lib.state.player_state import PlayState
 from typing import Optional
-from lib.sys.MPRISController import MPRISController
 import pathlib
 import logging
 from gi.repository import Gtk, GLib, Adw, Pango, Gst
@@ -17,7 +16,6 @@ from lib.state.player_state import PlayerState
 
 def ProgressBar(
     state: PlayerState,
-    player: Gst.Element,  # Just a place holder for now.
 ) -> Gtk.Widget:
     progress_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 1, 0.01)
     progress_scale.set_draw_value(False)
@@ -49,10 +47,7 @@ def ProgressBar(
 
         val_seconds = scale.get_value()
         new_pos_ns = int(val_seconds * 1e9)
-        player.seek_simple(
-            Gst.Format.TIME, Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT, new_pos_ns
-        )
-        state.current_time.on_next(new_pos_ns)
+        state.seek_request.on_next(new_pos_ns)
 
     progress_scale.connect("value-changed", on_scale_changed)
 
@@ -242,7 +237,6 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
 
 def SystemControls(
     state: PlayerState,
-    player: Gst.Element,
     show_now_playing: BehaviorSubject[bool],
 ) -> Gtk.Widget:
     right_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
@@ -294,8 +288,6 @@ def SystemControls(
     right_box.append(expand_btn)
 
     def on_vol_state_changed(vol: float):
-        player.set_property("volume", vol)
-
         if abs(vol_scale.get_value() - vol) > 0.001:
             vol_scale.set_value(vol)
 
@@ -347,29 +339,13 @@ def PlayBar(
     """
     A GStreamer-powered play bar built using functional components.
     """
-    # Ensure GStreamer is initialized (usually done at app startup)
-    if not Gst.is_initialized():
-        Gst.init(None)
-
-    _player = Gst.ElementFactory.make("playbin", "player")
-    if not _player:
-        logging.error("Failed to create GStreamer playbin element.")
-        raise RuntimeError("GStreamer initialization failed")
-    player = _player  # Type hint hack
-    flags = player.get_property("flags")
-    # Disable video output since this is an audio player
-    flags &= ~(1 << 0)
-    player.set_property("flags", flags)
-
-    mpris_controller = MPRISController(state)
-
     # Main PlayBar vertical Box
     play_bar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
     play_bar.set_size_request(-1, 100)
     play_bar.add_css_class("background")
 
     # Add components
-    play_bar.append(ProgressBar(state, player))
+    play_bar.append(ProgressBar(state))
 
     action_area = Gtk.CenterBox()
     action_area.set_margin_start(8)
@@ -379,64 +355,6 @@ def PlayBar(
 
     action_area.set_start_widget(PlayControls(state))
     action_area.set_center_widget(SongInfo(state))
-    action_area.set_end_widget(SystemControls(state, player, show_now_playing))
-
-    # General Player state observers
-    def on_audio_file_changed(file_path: pathlib.Path | None):
-        if file_path:
-            player.set_state(Gst.State.READY)
-            player.set_property("uri", file_path.as_uri())
-            if state.state.value == PlayState.PLAYING:
-                player.set_state(Gst.State.PLAYING)
-        else:
-            player.set_state(Gst.State.NULL)
-
-    state.audio_file.subscribe(on_audio_file_changed)
-
-    def on_state_changed(s: PlayState):
-        if not state.audio_file.value:
-            return
-        if s == PlayState.PLAYING:
-            player.set_state(Gst.State.PLAYING)
-        elif s == PlayState.PAUSED:
-            player.set_state(Gst.State.PAUSED)
-        elif s == PlayState.EMPTY:
-            player.set_state(Gst.State.NULL)
-
-    state.state.subscribe(on_state_changed)
-
-    def update_time_state():
-        if state.state.value == PlayState.PLAYING:
-            # Query position
-            success_pos, pos = player.query_position(Gst.Format.TIME)
-            if success_pos:
-                state.current_time.on_next(pos)
-
-            # Query total duration
-            success_dur, dur = player.query_duration(Gst.Format.TIME)
-            if success_dur:
-                state.total_time.on_next(dur)
-        return True  # Keep timeout alive
-
-    # Poll every 500ms
-    GLib.timeout_add(500, update_time_state)
-
-    bus = player.get_bus()
-    if not bus:
-        logging.error("Failed to get GStreamer bus.")
-        raise RuntimeError("GStreamer bus initialization failed")
-    bus.add_signal_watch()
-
-    def on_bus_message(bus: Gst.Bus, message: Gst.Message):
-        if message.type == Gst.MessageType.EOS:
-            state.state.on_next(PlayState.PAUSED)
-            state.current_time.on_next(0)
-            player.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, 0)
-        elif message.type == Gst.MessageType.ERROR:
-            err, debug = message.parse_error()
-            logging.error(f"GStreamer Error: {err}, {debug}")
-            state.state.on_next(PlayState.PAUSED)
-
-    bus.connect("message", on_bus_message)
+    action_area.set_end_widget(SystemControls(state, show_now_playing))
 
     return play_bar
