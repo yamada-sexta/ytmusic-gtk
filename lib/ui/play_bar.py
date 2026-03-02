@@ -5,8 +5,6 @@ from lib.ui.helpers import toggle_icon
 from lib.ui.helpers import format_time
 from lib.state.player_state import PlayState
 from typing import Optional
-import pathlib
-import logging
 from gi.repository import Gtk, GLib, Adw, Pango, Gst
 from reactivex import combine_latest
 from lib.state.player_state import PlayerState

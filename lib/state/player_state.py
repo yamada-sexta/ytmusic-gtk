@@ -8,6 +8,7 @@ from typing import Optional
 from gi.repository import GLib, Gst
 from reactivex.subject import BehaviorSubject, Subject
 from reactivex import operators as ops
+import ytmusicapi
 
 
 # Enum for the player state
@@ -71,6 +72,106 @@ class PlayerState:
     repeat_on: BehaviorSubject[bool] = field(
         default_factory=lambda: BehaviorSubject(False)
     )
+
+
+def play_audio(
+    state: PlayerState,
+    video_id: str,
+    yt: "ytmusicapi.YTMusic",
+    playlist_id: Optional[str] = None,
+    initial_temp_music: Optional[CurrentMusic] = None,
+) -> None:
+    import threading
+    from typing import cast, Any
+    from lib.sys.env import CACHE_DIR
+
+    state.state.on_next(PlayState.LOADING)
+    new_music = initial_temp_music or CurrentMusic(id=video_id)
+    state.current.on_next(new_music)
+
+    def fetch_details() -> None:
+        try:
+            data = None
+            if playlist_id and not playlist_id.startswith("RD"):
+                logging.info(f"Fetching playlist details for {playlist_id}")
+                data = yt.get_playlist(playlist_id)
+            elif video_id:
+                logging.info(f"Fetching song details for {video_id}")
+                data = yt.get_song(video_id)
+
+            if not data:
+                logging.warning("No additional details found for this item.")
+                return
+
+            # If not provided, try to extract some metadata
+            if not initial_temp_music:
+                try:
+                    video_details = data.get("videoDetails", {})
+                    if video_details:
+                        new_music.title = video_details.get("title", new_music.title)
+                        new_music.artist = video_details.get("author", new_music.artist)
+                        t_info = video_details.get("thumbnail", {}).get(
+                            "thumbnails", []
+                        )
+                        if t_info:
+                            new_music.album_art = t_info[-1].get(
+                                "url", new_music.album_art
+                            )
+                except Exception as meta_e:
+                    logging.warning(f"Failed to extract default metadata: {meta_e}")
+
+            import json
+
+            with open("debug_fetched_data.json", "w") as f:
+                json.dump(data, f, indent=4)
+
+            url = data["microformat"]["microformatDataRenderer"]["urlCanonical"]
+            logging.info(f"Canonical URL: {url}")
+
+            from yt_dlp import YoutubeDL
+
+            download_dir = CACHE_DIR / "songs" / video_id
+            download_dir.mkdir(parents=True, exist_ok=True)
+
+            logging.info(f"Downloading media to: {download_dir}")
+
+            marker_file = download_dir / "downloaded.txt"
+
+            if not marker_file.exists():
+                with YoutubeDL(
+                    params=cast(
+                        Any,
+                        {
+                            "js_runtimes": {"bun": {}, "node": {}},
+                            "paths": {"home": str(download_dir.absolute())},
+                            "format": "bestaudio/best",
+                            "noplaylist": True,
+                            "quiet": True,
+                        },
+                    )
+                ) as ydl:
+                    ydl.download([url])
+                    marker_file.touch()
+
+            downloaded_files = [
+                f
+                for f in download_dir.glob("*")
+                if f.is_file() and f.name != "downloaded.txt"
+            ]
+            if not downloaded_files:
+                logging.warning(f"No files downloaded to {download_dir}")
+                return
+
+            latest_file = max(downloaded_files, key=lambda f: f.stat().st_mtime)
+            logging.info(f"Latest downloaded file: {latest_file}")
+
+            new_music.audio_file.on_next(latest_file)
+            state.state.on_next(PlayState.PLAYING)
+
+        except Exception as e:
+            logging.error(f"Could not fetch or download media: {e}")
+
+    threading.Thread(target=fetch_details, daemon=True).start()
 
 
 def setup_player(state: PlayerState) -> Gst.Element:

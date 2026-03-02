@@ -49,5 +49,6 @@ This primary skill provides the core architectural context and programming guide
 
 ## Misc
 
-- **Prefer Early Return** - Return early if the function doesn't need to do anything else. Or if a value is `None`. This helps reduce the nesting level of the code.
-- **Use Logging** - Use the `logging` module for logging instead of `print()`. This allows for better control over the logging output and levels.
+- **Prefer Early Return:** - Return early if the function doesn't need to do anything else. Or if a value is `None`. This helps reduce the nesting level of the code.
+- **Use Logging:** - Use the `logging` module for logging instead of `print()`. This allows for better control over the logging output and levels.
+- **Ask Questions If You Need:** Everything that you do will be monitored. It is better to ask questions when you are not sure.

@@ -1,4 +1,3 @@
-from types import SimpleNamespace
 from lib.state.player_state import CurrentMusic
 from utils import load_thumbnail
 from typing import cast
@@ -202,33 +201,29 @@ def HomeItemCard(
             and player_state.current.value.id == item.video_id
         ):
             # current_state = player_state.state.value
-            if player_state.state == PlayState.PLAYING:
+            if player_state.state.value == PlayState.PLAYING:
                 player_state.state.on_next(PlayState.PAUSED)
                 return
-            elif player_state.state == PlayState.PAUSED:
+            elif player_state.state.value == PlayState.PAUSED:
                 player_state.state.on_next(PlayState.PLAYING)
                 return
-            elif player_state.state == PlayState.LOADING:
+            elif player_state.state.value == PlayState.LOADING:
                 return
-        # We are going to create a new current music object
-        # Set to loading
-        player_state.state.on_next(PlayState.LOADING)
+
         if not item.video_id:
             logging.warning("Item has no video ID, cannot play.")
             player_state.state.on_next(PlayState.EMPTY)
             return
-        title = "Unknown"
-        if item.title:
-            title = item.title
-        video_id = item.video_id
+
+        title = item.title or "Unknown"
         creator = "Unknown"
         if item.artists:
             creator = item.artists[0].name
         elif item.author:
             creator = item.author[0].name
-        album_name = "Unknown"
-        if item.album:
-            album_name = item.album.name
+
+        album_name = item.album.name if item.album else "Unknown"
+
         thumb_url = ""
         if item.thumbnails:
             thumb_url = (
@@ -236,8 +231,9 @@ def HomeItemCard(
                 if isinstance(item.thumbnails, list)
                 else item.thumbnails
             )
+
         new_music = CurrentMusic(
-            id=video_id,
+            id=item.video_id,
             title=title,
             artist=creator,
             album_name=album_name,
@@ -245,92 +241,16 @@ def HomeItemCard(
             is_liked=BehaviorSubject(False),
             is_disliked=BehaviorSubject(False),
         )
-        player_state.current.on_next(new_music)
 
-        # 2. Background Fetch for additional details
-        def fetch_details():
-            try:
-                data = None
-                # Check if it's a standard playlist (not a Radio/Mix)
-                if item.playlist_id and not item.playlist_id.startswith("RD"):
-                    logging.info(f"Fetching playlist details for {item.playlist_id}")
-                    data = yt.get_playlist(item.playlist_id)
+        from lib.state.player_state import play_audio
 
-                # If it's a song/video
-                elif item.video_id:
-                    logging.info(f"Fetching song details for {item.video_id}")
-                    data = yt.get_song(item.video_id)
-
-                if not data:
-                    logging.warning("No additional details found for this item.")
-                    return
-                # If no video ID return
-                if item.video_id is None:
-                    logging.warning("Item has no video ID, cannot fetch details.")
-                    return
-                logging.info("Successfully fetched extra details")
-                # Here you could update the player_state further if 'data'
-                # contains higher quality info (like full lyrics or album name)
-                # log data
-                # logging.debug(f"Fetched data: {data}")
-                # Dump to JSON
-                import json
-
-                with open("debug_fetched_data.json", "w") as f:
-                    json.dump(data, f, indent=4)
-                # Try to get the URL of the song
-                url = data["microformat"]["microformatDataRenderer"]["urlCanonical"]
-                logging.info(f"Canonical URL: {url}")
-                # Get actual streaming URL using ytdlp
-                from yt_dlp import YoutubeDL
-
-                download_dir = CACHE_DIR / "songs" / item.video_id
-                download_dir.mkdir(parents=True, exist_ok=True)
-
-                logging.info(f"Downloading media to: {download_dir}")
-
-                marker_file = download_dir / "downloaded.txt"
-
-                # If file doesn't exist, download it. This prevents re-downloading on every click.
-                if not marker_file.exists():
-
-                    with YoutubeDL(
-                        params=cast(
-                            Any,
-                            {
-                                "js_runtimes": {"bun": {}, "node": {}},
-                                "paths": {"home": str(download_dir.absolute())},
-                                "format": "bestaudio/best",  # Prioritize high-quality audio
-                                "noplaylist": True,  # Ensure only the song is downloaded
-                                "quiet": True,  # Reduce console noise if desired
-                            },
-                        )
-                    ) as ydl:
-                        ydl.download([url])
-                        # Create a marker file to indicate this song has been downloaded
-                        marker_file.touch()
-                # Post-download, find the downloaded file (assuming only one new file appears)
-                # And not the marker file
-                downloaded_files = [
-                    f
-                    for f in download_dir.glob("*")
-                    if f.is_file() and f.name != "downloaded.txt"
-                ]
-                if not downloaded_files:
-                    logging.warning(f"No files downloaded to {download_dir}")
-
-                latest_file = max(downloaded_files, key=lambda f: f.stat().st_mtime)
-                logging.info(f"Latest downloaded file: {latest_file}")
-                # set the file
-                new_music.audio_file.on_next(latest_file)
-                # set play to true
-                player_state.state.on_next(PlayState.PLAYING)
-
-            except Exception as e:
-                logging.error(f"Note: Could not fetch additional metadata: {e}")
-
-        # Run the fetch in a thread so the UI doesn't stutter
-        threading.Thread(target=fetch_details, daemon=True).start()
+        play_audio(
+            state=player_state,
+            video_id=item.video_id,
+            yt=yt,
+            playlist_id=item.playlist_id,
+            initial_temp_music=new_music,
+        )
 
     click.connect("pressed", on_card_click)
     card.add_controller(click)
