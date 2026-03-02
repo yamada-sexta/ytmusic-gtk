@@ -19,8 +19,14 @@ class PlayState(enum.Enum):
     LOADING = 3
 
 
+class LikeStatus(enum.Enum):
+    NONE = 0
+    LIKE = 1
+    DISLIKE = 2
+
+
 @dataclass
-class CurrentMusic:
+class MediaStatus:
     id: str
     audio_file: BehaviorSubject[Optional[pathlib.Path]] = field(
         default_factory=lambda: BehaviorSubject[Optional[pathlib.Path]](None)
@@ -31,12 +37,15 @@ class CurrentMusic:
     album_name: Optional[str] = field(default=None)
     year: Optional[str] = field(default=None)
     album_art: Optional[str] = field(default=None)
-    is_liked: BehaviorSubject[bool] = field(
-        default_factory=lambda: BehaviorSubject(False)
+    like_status: BehaviorSubject[LikeStatus] = field(
+        default_factory=lambda: BehaviorSubject(LikeStatus.NONE)
     )
-    is_disliked: BehaviorSubject[bool] = field(
-        default_factory=lambda: BehaviorSubject(False)
-    )
+    # is_liked: BehaviorSubject[bool] = field(
+    #     default_factory=lambda: BehaviorSubject(False)
+    # )
+    # is_disliked: BehaviorSubject[bool] = field(
+    #     default_factory=lambda: BehaviorSubject(False)
+    # )
 
 
 @dataclass
@@ -58,8 +67,8 @@ class PlayerState:
         default_factory=lambda: BehaviorSubject(PlayState.EMPTY)
     )
 
-    current: BehaviorSubject[Optional[CurrentMusic]] = field(
-        default_factory=lambda: BehaviorSubject[Optional[CurrentMusic]](None)
+    current: BehaviorSubject[Optional[MediaStatus]] = field(
+        default_factory=lambda: BehaviorSubject[Optional[MediaStatus]](None)
     )
 
     stream: StreamStatus = field(default_factory=StreamStatus)
@@ -79,14 +88,14 @@ def play_audio(
     video_id: str,
     yt: "ytmusicapi.YTMusic",
     playlist_id: Optional[str] = None,
-    initial_temp_music: Optional[CurrentMusic] = None,
+    initial_temp_music: Optional[MediaStatus] = None,
 ) -> None:
     import threading
     from typing import cast, Any
     from lib.sys.env import CACHE_DIR
 
     state.state.on_next(PlayState.LOADING)
-    new_music = initial_temp_music or CurrentMusic(id=video_id)
+    new_music = initial_temp_music or MediaStatus(id=video_id)
     state.current.on_next(new_music)
 
     # related = yt.get_song_related(video_id)
@@ -317,7 +326,7 @@ def setup_player(state: PlayerState) -> Gst.Element:
         )
         state.stream.current_time.on_next(position_ns)
 
-    def on_current(current: Optional[CurrentMusic]) -> None:
+    def on_current(current: Optional[MediaStatus]) -> None:
         if not current:
             return
         state.stream.seek_request.subscribe(on_seek_request)

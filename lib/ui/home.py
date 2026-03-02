@@ -1,4 +1,5 @@
-from lib.state.player_state import CurrentMusic
+from lib.state.player_state import LikeStatus
+from lib.state.player_state import MediaStatus
 from utils import load_thumbnail
 from reactivex import Subject
 from typing import Tuple
@@ -226,15 +227,16 @@ def HomeItemCard(
                 if isinstance(item.thumbnails, list)
                 else item.thumbnails
             )
-
-        new_music = CurrentMusic(
+        like_status = LikeStatus.NONE
+        # if hasattr(item, "like_status"):
+        #     like_status = item.like_status
+        new_music = MediaStatus(
             id=item.video_id,
             title=title,
             artist=creator,
             album_name=album_name,
             album_art=thumb_url,
-            is_liked=BehaviorSubject(False),
-            is_disliked=BehaviorSubject(False),
+            like_status=BehaviorSubject(like_status),
         )
 
         from lib.state.player_state import play_audio
@@ -266,7 +268,7 @@ def HomeItemCard(
 
     # Listen for changes in the player state ID
     # player_state.id.subscribe(on_next=update_playing_state)
-    def on_current_changed(current: Optional[CurrentMusic]) -> None:
+    def on_current_changed(current: Optional[MediaStatus]) -> None:
         if current and current.id:
             update_playing_state(current.id)
         else:

@@ -1,9 +1,9 @@
 from typing import Optional
-from lib.state.player_state import CurrentMusic
+from lib.state.player_state import MediaStatus
 from reactivex.subject import BehaviorSubject
 from lib.ui.play_bar import PlayerState
 from lib.state.player_state import PlayState
-from gi.repository import Gtk, Adw, GLib, GObject
+from gi.repository import Gtk, Adw, GLib, GObject, Pango
 
 
 def create_now_playing_view(
@@ -41,9 +41,21 @@ def create_now_playing_view(
     left_pane.set_halign(Gtk.Align.CENTER)
     left_pane.set_hexpand(True)
 
-    art_image = Gtk.Image(icon_name="audio-x-generic-symbolic")
-    art_image.set_pixel_size(400)
-    art_image.add_css_class("card")
+    art_stack = Gtk.Stack()
+    art_stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
+
+    art_fallback = Gtk.Image(icon_name="audio-x-generic-symbolic")
+    art_fallback.set_pixel_size(256)
+    art_fallback.add_css_class("dim-label")
+    art_fallback.add_css_class("card")
+
+    art_picture = Gtk.Picture()
+    art_picture.set_can_shrink(True)
+    art_picture.set_content_fit(Gtk.ContentFit.CONTAIN)
+    art_picture.add_css_class("card")
+
+    art_stack.add_named(art_fallback, "fallback")
+    art_stack.add_named(art_picture, "picture")
 
     # Make the art clickable to toggle play/pause
     click_ctrl = Gtk.GestureClick.new()
@@ -56,20 +68,25 @@ def create_now_playing_view(
             state.state.on_next(PlayState.PLAYING)
 
     click_ctrl.connect("pressed", toggle_play)
-    art_image.add_controller(click_ctrl)
+    art_stack.add_controller(click_ctrl)
 
     title_label = Gtk.Label(
         label="<span size='x-large' weight='bold'>Loading...</span>", use_markup=True
     )
-    artist_label = Gtk.Label(label="Artist Name")
+    title_label.set_ellipsize(Pango.EllipsizeMode.END)
+    title_label.set_lines(1)
 
-    left_pane.append(art_image)
+    artist_label = Gtk.Label(label="Artist Name")
+    artist_label.set_ellipsize(Pango.EllipsizeMode.END)
+    artist_label.set_lines(1)
+
+    left_pane.append(art_stack)
     left_pane.append(title_label)
     left_pane.append(artist_label)
 
     # --- Right Pane (Sidebar) ---
     right_pane = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
-    right_pane.set_size_request(400, -1)
+    right_pane.set_size_request(300, -1)
     right_pane.set_margin_start(16)
     right_pane.set_margin_end(16)
     right_pane.set_margin_top(16)
@@ -169,15 +186,18 @@ def create_now_playing_view(
 
     def _on_album_art_change(value: Optional[str]):
         if not value:
+            GLib.idle_add(art_stack.set_visible_child_name, "fallback")
             return
         if isinstance(value, str) and value.startswith("http"):
             from utils import load_image_async
 
-            load_image_async(art_image, value)
+            load_image_async(art_picture, value)
+            GLib.idle_add(art_stack.set_visible_child_name, "picture")
         else:
-            GLib.idle_add(art_image.set_from_icon_name, value)
+            GLib.idle_add(art_fallback.set_from_icon_name, value)
+            GLib.idle_add(art_stack.set_visible_child_name, "fallback")
 
-    def on_current(current: Optional[CurrentMusic]) -> None:
+    def on_current(current: Optional[MediaStatus]) -> None:
         if not current:
             return
         update_title(current.title)

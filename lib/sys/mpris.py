@@ -8,7 +8,7 @@ from reactivex import operators as ops
 
 if typing.TYPE_CHECKING:
     from lib.ui.play_bar import PlayerState
-    from lib.state.player_state import PlayState, CurrentMusic
+    from lib.state.player_state import PlayState, MediaStatus
 
 
 # This XML defines the D-Bus API contract GNOME expects from your player
@@ -199,7 +199,7 @@ def setup_mpris_controller(state: "PlayerState") -> None:
     #         current.artist,
     #         state.stream.total_time,
     #     ).subscribe(on_metadata_changed)
-    def on_current_changed(current: Optional["CurrentMusic"]) -> None:
+    def on_current_changed(current: Optional["MediaStatus"]) -> None:
         if not current:
             return
         combine_latest(

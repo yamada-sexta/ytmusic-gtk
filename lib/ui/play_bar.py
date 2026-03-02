@@ -1,4 +1,5 @@
-from lib.state.player_state import CurrentMusic
+from lib.state.player_state import LikeStatus
+from lib.state.player_state import MediaStatus
 from reactivex.subject import BehaviorSubject
 from lib.ui.helpers import toggle_css
 from lib.ui.helpers import toggle_icon
@@ -196,23 +197,23 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
         else:
             album_art.set_from_icon_name(value)
 
-    def on_current(current: Optional[CurrentMusic]) -> None:
+    def on_current(current: Optional[MediaStatus]) -> None:
         if not current:
             return
         for btn in (dislike_btn, like_btn, more_btn):
             btn.set_sensitive(current != PlayState.EMPTY)
-        current.is_liked.subscribe(
+        current.like_status.subscribe(
             lambda val: toggle_icon(
                 like_btn,
-                val,
+                val == LikeStatus.LIKE,
                 "thumbs-up-symbolic",
                 "thumbs-up-outline-symbolic",
             )
         )
-        current.is_disliked.subscribe(
+        current.like_status.subscribe(
             lambda val: toggle_icon(
                 dislike_btn,
-                val,
+                val == LikeStatus.DISLIKE,
                 "thumbs-down-symbolic",
                 "thumbs-down-outline-symbolic",
             )
@@ -229,19 +230,23 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
         current = state.current.value
         if not current:
             return
-        current.is_liked.on_next(not current.is_liked.value)
-        if current.is_liked.value and current.is_disliked.value:
-            current.is_disliked.on_next(False)
-        state.current.on_next(current)
+
+        if current.like_status.value == LikeStatus.LIKE:
+            current.like_status.on_next(LikeStatus.NONE)
+        else:
+            current.like_status.on_next(LikeStatus.LIKE)
 
     def on_dislike_clicked(_):
         current = state.current.value
         if not current:
             return
-        current.is_disliked.on_next(not current.is_disliked.value)
-        if current.is_disliked.value and current.is_liked.value:
-            current.is_liked.on_next(False)
-        state.current.on_next(current)
+        if current.like_status.value == LikeStatus.DISLIKE:
+            current.like_status.on_next(LikeStatus.NONE)
+        else:
+            current.like_status.on_next(LikeStatus.DISLIKE)
+
+    like_btn.connect("clicked", on_like_clicked)
+    dislike_btn.connect("clicked", on_dislike_clicked)
 
     def update_song_info_sensitivity(s: PlayState) -> None:
         for btn in (dislike_btn, like_btn, more_btn):
