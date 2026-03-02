@@ -34,12 +34,18 @@ def create_now_playing_view(
 
     # Main Content Box
     split_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+    split_box.set_margin_start(32)
+    split_box.set_margin_end(32)
+    split_box.set_margin_top(32)
+    split_box.set_margin_bottom(32)
 
     # --- Left Pane (Video / Art) ---
-    left_pane = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
+    left_pane = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=32)
     left_pane.set_valign(Gtk.Align.CENTER)
     left_pane.set_halign(Gtk.Align.CENTER)
     left_pane.set_hexpand(True)
+    left_pane.set_margin_start(32)
+    left_pane.set_margin_end(32)
 
     art_stack = Gtk.Stack()
     art_stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
@@ -85,7 +91,7 @@ def create_now_playing_view(
     left_pane.append(artist_label)
 
     # --- Right Pane (Sidebar) ---
-    right_pane = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+    right_pane = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
     right_pane.set_size_request(300, -1)
     right_pane.set_margin_start(16)
     right_pane.set_margin_end(16)
@@ -208,13 +214,12 @@ def create_now_playing_view(
                 title=media.title or "Unknown Title",
                 subtitle=media.artist or "Unknown Artist",
             )
+            row.set_activatable(True)
             if media.album_art:
                 from utils import load_image_async
 
-                img = Gtk.Picture()
-                img.set_can_shrink(True)
-                img.set_content_fit(Gtk.ContentFit.CONTAIN)
-                img.set_size_request(48, 48)
+                img = Gtk.Image()
+                img.set_pixel_size(48)
                 img.add_css_class("card")
                 load_image_async(img, media.album_art)
                 row.add_prefix(img)
