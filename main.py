@@ -128,7 +128,7 @@ class YTMusicWindow(Adw.ApplicationWindow):
             HomePage(yt_subject, self.player_state), "home", "Home", "go-home-symbolic"
         )
         self.stack.add_titled_with_icon(
-            Gtk.Label(label="Explore Page"), "explore", "Explore", "compass2-symbolic"
+            ExplorePage(yt_subject), "explore", "Explore", "compass2-symbolic"
         )
         self.stack.add_titled_with_icon(
             Gtk.Label(label="Library Coming Soon!"),
