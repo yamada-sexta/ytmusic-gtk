@@ -379,10 +379,7 @@ def PlayBar(state: PlayerState = PlayerState()) -> Gtk.Widget:
     dislike_btn.connect(
         "clicked", lambda _: state.is_disliked.on_next(not state.is_disliked.value)
     )
-
-    # ----------------------------------------------------
-    # 3. SYSTEM CONTROLS (Right)
-    # ----------------------------------------------------
+    # SYSTEM CONTROLS (Right)
     right_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
     right_box.set_valign(Gtk.Align.CENTER)
     right_box.set_margin_end(16)
