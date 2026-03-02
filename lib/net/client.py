@@ -59,11 +59,11 @@ def auto_login(force_refresh: bool = False) -> Optional[ytmusicapi.YTMusic]:
 
     cookies_dict = None
 
-    # 1. Try load from cache unless we are forcing a refresh
+    # Try load from cache unless we are forcing a refresh
     if not force_refresh:
         cookies_dict = load_cached_cookies()
 
-    # 2. Extract fresh cookies from the browser if no cache or forced refresh
+    # Extract fresh cookies from the browser if no cache or forced refresh
     if cookies_dict is None:
         logging.info("Fetching fresh cookies from browser...")
         url = "https://music.youtube.com"
@@ -77,7 +77,7 @@ def auto_login(force_refresh: bool = False) -> Optional[ytmusicapi.YTMusic]:
 
     cookie_string = "; ".join([f"{k}={v}" for k, v in cookies_dict.items()])
 
-    # 3. Reconstruct the raw headers
+    # Reconstruct the raw headers
     raw_headers = (
         "Accept: */*\n"
         "Accept-Language: en-US,en;q=0.9\n"
@@ -89,11 +89,11 @@ def auto_login(force_refresh: bool = False) -> Optional[ytmusicapi.YTMusic]:
     )
 
     try:
-        # 4. Official setup call
+        # Official setup call
         ytmusicapi.setup(filepath=BROWSER_JSON, headers_raw=raw_headers)
         yt = ytmusicapi.YTMusic(BROWSER_JSON)
 
-        # 5. Verify authentication
+        # Verify authentication
         logging.info("Verifying authentication...")
         account = AccountInfo.model_validate(yt.get_account_info())
         logging.info(f"Logged in as: {account.account_name} ({account.channel_handle})")
