@@ -1,4 +1,4 @@
-from lib.MPRISController import MPRISController
+from lib.sys.MPRISController import MPRISController
 from typing import Optional
 import pathlib
 import logging

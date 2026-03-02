@@ -43,7 +43,7 @@ from lib.ui.home import HomePage
 
 # Assuming these are available in your project structure
 # from lib.data import ExploreData
-from lib.client import auto_login
+from lib.net.client import auto_login
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG, format="[%(levelname)s] %(message)s")
