@@ -7,16 +7,19 @@ Built with GTK4 and LibAdwaita.
 > [!WARNING]  
 > This project is currently HIGHLY experimental!
 
-<img width="951" height="757" alt="Screenshot" src="https://github.com/user-attachments/assets/7c536c1c-dd9d-4e7b-96e9-5ac5e6c11b8a" />
+<img width="1014" height="874" alt="image" src="https://github.com/user-attachments/assets/590c56e9-2974-46eb-92a7-cd83ca3a36a3" />
 
-<img width="979" height="854" alt="image" src="https://github.com/user-attachments/assets/a3cecf73-f3f7-4b1c-8e6b-cae75bc1aea4" />
+<img width="1056" height="834" alt="" src="https://github.com/user-attachments/assets/5162050c-2572-4822-a3fc-d307af6972ed" />
 
+<img width="824" height="681" alt="image" src="https://github.com/user-attachments/assets/ef56cddb-46cd-4088-b140-4b6d53081253" />
 
 ## Features
 - Login (partial)
 - Playback (partial)
 - Home Page (partial)
 - Like/dislike
+
+
 
 
 
