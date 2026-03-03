@@ -310,7 +310,7 @@ def HomeRow(
     header = Gtk.Label(label=section.title)
     header.set_halign(Gtk.Align.START)
     header.set_margin_start(12)
-    header.set_margin_bottom(8)
+    header.set_margin_bottom(4)
     header.add_css_class("title-2")
     box.append(header)
 
@@ -326,8 +326,8 @@ def HomeRow(
     # NEW: Add padding around the entire row of items
     row_box.set_margin_start(12)  # Space before the first item
     row_box.set_margin_end(12)  # Space after the last item
-    row_box.set_margin_top(12)  # Slight gap below the section header
-    row_box.set_margin_bottom(16)  # Prevents horizontal scrollbar from overlapping text
+    row_box.set_margin_top(4)  # Slight gap below the section header
+    row_box.set_margin_bottom(8)  # Prevents horizontal scrollbar from overlapping text
 
     for item in section.contents:
         row_box.append(HomeItemCard(item, player_state, yt))
