@@ -1,3 +1,5 @@
+import logging
+import ytmusicapi
 from lib.utils import ThumbnailWidgetFromUrl
 from lib.state.player_state import LikeStatus
 from lib.state.player_state import MediaStatus
@@ -243,24 +245,50 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
 
     state.current.subscribe(on_current)
 
-    def on_like_clicked(_):
+    def _rate_song_remote(
+        yt: "ytmusicapi.YTMusic", video_id: str, new_status: str
+    ) -> None:
+        import threading
+        from ytmusicapi.models.content.enums import LikeStatus as YTLikeStatus
+
+        yt_status = YTLikeStatus(new_status)
+
+        def do_rate() -> None:
+            try:
+                yt.rate_song(video_id, yt_status)
+                logging.debug(f"Rated {video_id} as {new_status}")
+            except Exception as e:
+                logging.error(f"Failed to rate song {video_id}: {e}")
+
+        threading.Thread(target=do_rate, daemon=True).start()
+
+    def on_like_clicked(_) -> None:
         current = state.current_item
         if not current:
             return
 
-        if current.like_status.value == "LIKE":
-            current.like_status.on_next("INDIFFERENT")
-        else:
-            current.like_status.on_next("LIKE")
+        new_status: LikeStatus = (
+            "INDIFFERENT" if current.like_status.value == "LIKE" else "LIKE"
+        )
+        current.like_status.on_next(new_status)
 
-    def on_dislike_clicked(_):
+        yt = state.yt.value
+        if yt:
+            _rate_song_remote(yt, current.id, new_status)
+
+    def on_dislike_clicked(_) -> None:
         current = state.current_item
         if not current:
             return
-        if current.like_status.value == "DISLIKE":
-            current.like_status.on_next("INDIFFERENT")
-        else:
-            current.like_status.on_next("DISLIKE")
+
+        new_status: LikeStatus = (
+            "INDIFFERENT" if current.like_status.value == "DISLIKE" else "DISLIKE"
+        )
+        current.like_status.on_next(new_status)
+
+        yt = state.yt.value
+        if yt:
+            _rate_song_remote(yt, current.id, new_status)
 
     like_btn.connect("clicked", on_like_clicked)
     dislike_btn.connect("clicked", on_dislike_clicked)
