@@ -13,11 +13,16 @@ Built with GTK4 and LibAdwaita.
 
 <img width="824" height="681" alt="image" src="https://github.com/user-attachments/assets/ef56cddb-46cd-4088-b140-4b6d53081253" />
 
+> Also works on macOS :D
+
+<img width="1012" height="744" alt="mac" src="https://github.com/user-attachments/assets/7ef0acab-e0b2-48dd-a155-37dfd745eb87" />
+
 ## Features
 - Login (partial)
 - Playback (partial)
 - Home Page (partial)
 - Like/dislike
+
 
 
 
