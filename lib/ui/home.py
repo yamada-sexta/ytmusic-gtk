@@ -1,6 +1,6 @@
 from lib.state.player_state import LikeStatus
 from lib.state.player_state import MediaStatus
-from utils import load_thumbnail
+from lib.utils import ThumbnailWidget
 from reactivex import Subject
 from typing import Tuple
 from lib.data import Album, Artist, BaseMedia
@@ -75,20 +75,21 @@ def HomeItemCard(
     card.set_halign(Gtk.Align.START)
     card.set_valign(Gtk.Align.START)
 
-    # Use Gtk.Picture but enforce a strict size and scaling
-    img = Gtk.Picture()
-    img.set_can_shrink(
-        True
-    )  # Crucial: Stops high-res network images from blowing up the UI
-    img.set_content_fit(Gtk.ContentFit.COVER)
-    img.set_size_request(width, height)  # Maintain aspect ratio
-    img.add_css_class("card")  # Adds nice Adwaita rounding to the image
+    import reactivex as rx
 
-    load_thumbnail(img, item.thumbnails)
+    img = ThumbnailWidget(rx.of(item.thumbnails))
 
-    # Wrap the image in an overlay for the play button
+    # Clip to the card's intended pixel dimensions.
+    # halign=CENTER prevents img_clip from expanding beyond width.
+    img_clip = Gtk.Box()
+    img_clip.set_size_request(width, height)
+    img_clip.set_overflow(Gtk.Overflow.HIDDEN)
+    img_clip.set_halign(Gtk.Align.CENTER)
+    img_clip.append(img)
+
+    # Wrap the clipped image in an overlay for the play button
     overlay = Gtk.Overlay()
-    overlay.set_child(img)
+    overlay.set_child(img_clip)
 
     # Create a proper container for the play button to prevent stretching
     play_box = Gtk.Box()

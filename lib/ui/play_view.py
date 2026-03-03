@@ -1,3 +1,4 @@
+from lib.utils import ThumbnailWidget, ThumbnailWidgetFromUrl
 from typing import Optional
 from lib.state.player_state import MediaStatus
 from reactivex.subject import BehaviorSubject
@@ -32,26 +33,28 @@ def create_now_playing_view(
     left_pane.set_margin_start(32)
     left_pane.set_margin_end(32)
 
-    art_stack = Gtk.Stack()
-    art_stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
-    art_stack.set_hhomogeneous(False)
-    art_stack.set_vhomogeneous(False)
-    art_stack.set_halign(Gtk.Align.CENTER)
-    art_stack.set_valign(Gtk.Align.CENTER)
+    # Large album art — fed by a reactive stream from state.current
+    from reactivex import operators as ops
+    import reactivex as rx
 
-    art_fallback = Gtk.Image(icon_name="audio-x-generic-symbolic")
-    art_fallback.set_pixel_size(256)
-    art_fallback.add_css_class("dim-label")
-    art_fallback.add_css_class("card")
+    art_thumbnails_stream = state.current.pipe(
+        ops.map(
+            lambda c: (
+                [
+                    __import__("lib.data", fromlist=["Thumbnail"]).Thumbnail(
+                        url=c.album_art
+                    )
+                ]
+                if c and c.album_art
+                else None
+            )
+        ),
+    )
+    art_widget = ThumbnailWidget(art_thumbnails_stream)
+    art_widget.set_halign(Gtk.Align.CENTER)
+    art_widget.set_valign(Gtk.Align.CENTER)
+    art_widget.set_hexpand(True)
 
-    from lib.ui.helpers import create_album_art_card
-
-    pic_frame, art_picture = create_album_art_card()
-
-    art_stack.add_named(art_fallback, "fallback")
-    art_stack.add_named(pic_frame, "picture")
-
-    # Make the art clickable to toggle play/pause
     click_ctrl = Gtk.GestureClick.new()
 
     def toggle_play(*args):
@@ -62,7 +65,7 @@ def create_now_playing_view(
             state.state.on_next(PlayState.PLAYING)
 
     click_ctrl.connect("pressed", toggle_play)
-    art_stack.add_controller(click_ctrl)
+    art_widget.add_controller(click_ctrl)
 
     title_label = Gtk.Label(
         label="<span size='x-large' weight='bold'>Loading...</span>", use_markup=True
@@ -74,7 +77,7 @@ def create_now_playing_view(
     artist_label.set_ellipsize(Pango.EllipsizeMode.END)
     artist_label.set_lines(1)
 
-    left_pane.append(art_stack)
+    left_pane.append(art_widget)
     left_pane.append(title_label)
     left_pane.append(artist_label)
 
@@ -146,6 +149,7 @@ def create_now_playing_view(
     queue_list.add_css_class("boxed-list")
     queue_list.add_css_class("transparent")
     queue_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
+    queue_list.set_valign(Gtk.Align.START)
 
     def _on_row_activated(box: Gtk.ListBox, row: Gtk.ListBoxRow) -> None:
         state.playlist.index.on_next(row.get_index())
@@ -165,7 +169,8 @@ def create_now_playing_view(
 
     view.set_content(split_box)
 
-    # Reactive Bindings
+    import reactivex as rx
+
     def update_title(title: Optional[str]):
         markup = f"<span size='x-large' weight='bold'>{GLib.markup_escape_text(title or '')}</span>"
         GLib.idle_add(title_label.set_markup, markup)
@@ -173,25 +178,11 @@ def create_now_playing_view(
     def update_artist(artist: Optional[str]):
         GLib.idle_add(artist_label.set_text, artist or "")
 
-    def _on_album_art_change(value: Optional[str]):
-        if not value:
-            GLib.idle_add(art_stack.set_visible_child_name, "fallback")
-            return
-        if isinstance(value, str) and value.startswith("http"):
-            from utils import load_image_async
-
-            load_image_async(art_picture, value)
-            GLib.idle_add(art_stack.set_visible_child_name, "picture")
-        else:
-            GLib.idle_add(art_fallback.set_from_icon_name, value)
-            GLib.idle_add(art_stack.set_visible_child_name, "fallback")
-
     def on_current(current: Optional[MediaStatus]) -> None:
         if not current:
             return
         update_title(current.title)
         update_artist(current.artist)
-        _on_album_art_change(current.album_art)
 
     def _update_queue(media_list: list[MediaStatus]) -> None:
         while child := queue_list.get_first_child():
@@ -206,20 +197,20 @@ def create_now_playing_view(
             row.set_subtitle_lines(1)
             row.set_activatable(True)
 
-            if media.album_art:
-                from utils import load_image_async
-
-                img = Gtk.Image()
-                img.set_pixel_size(48)
-                img.add_css_class("card")
-                load_image_async(img, media.album_art)
-                row.add_prefix(img)
-            else:
-                img = Gtk.Image(icon_name="audio-x-generic-symbolic")
-                img.set_pixel_size(48)
-                img.add_css_class("card")
-                img.add_css_class("dim-label")
-                row.add_prefix(img)
+            thumb = ThumbnailWidgetFromUrl(rx.of(media.album_art or None))
+            h_clamp = Adw.Clamp(orientation=Gtk.Orientation.HORIZONTAL)
+            h_clamp.set_maximum_size(48)
+            h_clamp.set_tightening_threshold(0)
+            h_clamp.set_hexpand(False)
+            h_clamp.set_halign(Gtk.Align.START)
+            v_clamp = Adw.Clamp(orientation=Gtk.Orientation.VERTICAL)
+            v_clamp.set_maximum_size(48)
+            v_clamp.set_tightening_threshold(0)
+            v_clamp.set_vexpand(False)
+            v_clamp.set_valign(Gtk.Align.START)
+            v_clamp.set_child(thumb)
+            h_clamp.set_child(v_clamp)
+            row.add_prefix(h_clamp)
 
             queue_list.append(row)
 

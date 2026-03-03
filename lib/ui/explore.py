@@ -1,6 +1,6 @@
 from typing import Tuple
 from typing import Any
-from utils import load_thumbnail
+from lib.utils import ThumbnailWidget
 from reactivex.subject import BehaviorSubject
 import ytmusicapi
 import threading
@@ -93,14 +93,10 @@ def build_trending_list(trending_data: Trending) -> Adw.PreferencesGroup:
         rank_lbl.add_css_class("dim-label")
         row.add_prefix(rank_lbl)
 
-        # 2. Small Thumbnail
-        img = Gtk.Picture()
+        import reactivex as rx
+
+        img = ThumbnailWidget(rx.of(item.thumbnails))
         img.set_size_request(48, 48)
-        img.set_can_shrink(True)
-        img.set_content_fit(Gtk.ContentFit.COVER)
-        img.add_css_class("card")  # Rounds the corners slightly
-        if item.thumbnails:
-            load_thumbnail(img, item.thumbnails)
 
         # Wrap image in a box for margin
         img_box = Gtk.Box()
@@ -162,12 +158,10 @@ def build_video_carousel(title: str, videos: List[NewVideo]) -> Gtk.Box:
         width, height = 240, 135
         card.set_size_request(width, height + 50)
 
-        img = Gtk.Picture()
+        import reactivex as rx
+
+        img = ThumbnailWidget(rx.of(video.thumbnails))
         img.set_size_request(width, height)
-        img.set_content_fit(Gtk.ContentFit.COVER)
-        img.add_css_class("card")
-        if video.thumbnails:
-            load_thumbnail(img, video.thumbnails)
 
         # Video metadata
         lbl_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
@@ -219,12 +213,10 @@ def build_releases_carousel(title: str, releases: List[NewRelease]) -> Gtk.Box:
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         card.set_size_request(160, 210)
 
-        img = Gtk.Picture()
+        import reactivex as rx
+
+        img = ThumbnailWidget(rx.of(item.thumbnails))
         img.set_size_request(160, 160)
-        img.set_content_fit(Gtk.ContentFit.COVER)
-        img.add_css_class("card")
-        if item.thumbnails:
-            load_thumbnail(img, item.thumbnails)
 
         title_lbl = Gtk.Label(label=item.title)
         title_lbl.set_halign(Gtk.Align.START)
@@ -262,15 +254,12 @@ def ExploreCard(item: BaseMedia, rank: Optional[int] = None) -> Gtk.Box:
     card.set_halign(Gtk.Align.START)
     card.set_valign(Gtk.Align.START)
 
-    # Image setup
-    img = Gtk.Picture()
-    img.set_can_shrink(True)
-    img.set_content_fit(Gtk.ContentFit.COVER)
-    img.set_size_request(IMAGE_SIZE, IMAGE_SIZE)
-    img.add_css_class("card")
+    import reactivex as rx
 
-    if hasattr(item, "thumbnails") and item.thumbnails:
-        load_thumbnail(img, item.thumbnails)
+    img = ThumbnailWidget(
+        rx.of(item.thumbnails if hasattr(item, "thumbnails") else None)
+    )
+    img.set_size_request(IMAGE_SIZE, IMAGE_SIZE)
 
     overlay = Gtk.Overlay()
     overlay.set_child(img)

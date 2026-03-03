@@ -1,3 +1,4 @@
+from lib.utils import ThumbnailWidgetFromUrl
 from lib.state.player_state import LikeStatus
 from lib.state.player_state import MediaStatus
 from reactivex.subject import BehaviorSubject
@@ -145,9 +146,32 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
     center_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
     center_box.set_valign(Gtk.Align.CENTER)
 
-    album_art = Gtk.Image()
-    album_art.set_pixel_size(48)
-    album_art.add_css_class("card")
+    # Derive a URL stream from the current-track observable and feed it into
+    # ThumbnailWidgetFromUrl — the widget handles all spinner / load / fallback logic
+    from reactivex import operators as ops
+
+    album_art_url_stream = state.current.pipe(
+        ops.map(lambda c: c.album_art if c else None),
+    )
+    thumbnail_widget = ThumbnailWidgetFromUrl(album_art_url_stream)
+
+    # Two nested Adw.Clamp widgets clamp the thumbnail to 48×48px in both
+    # dimensions. Adw.Clamp supports orientation, so one horizontal + one vertical
+    # clamp together act as a true 2-D maximum-size constraint.
+    h_clamp = Adw.Clamp(orientation=Gtk.Orientation.HORIZONTAL)
+    h_clamp.set_maximum_size(48)
+    h_clamp.set_tightening_threshold(0)
+    h_clamp.set_hexpand(False)
+    h_clamp.set_halign(Gtk.Align.CENTER)
+
+    v_clamp = Adw.Clamp(orientation=Gtk.Orientation.VERTICAL)
+    v_clamp.set_maximum_size(48)
+    v_clamp.set_tightening_threshold(0)
+    v_clamp.set_vexpand(False)
+    v_clamp.set_valign(Gtk.Align.CENTER)
+    v_clamp.set_child(thumbnail_widget)
+
+    h_clamp.set_child(v_clamp)
 
     text_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
     text_vbox.set_valign(Gtk.Align.CENTER)
@@ -183,21 +207,11 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
     actions_box.append(like_btn)
     actions_box.append(more_btn)
 
-    center_box.append(album_art)
+    center_box.append(h_clamp)
     center_box.append(text_vbox)
     center_box.append(actions_box)
 
     center_clamp.set_child(center_box)
-
-    def _on_album_art_change(value: Optional[str]):
-        if not value:
-            return
-        if isinstance(value, str) and value.startswith("http"):
-            from utils import load_image_async
-
-            load_image_async(album_art, value)
-        else:
-            album_art.set_from_icon_name(value)
 
     def on_current(current: Optional[MediaStatus]) -> None:
         if not current:
@@ -224,7 +238,6 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
             " • ".join(filter(None, [current.artist, current.album_name, current.year]))
         )
         title_label.set_markup(f"<b>{GLib.markup_escape_text(current.title or '')}</b>")
-        _on_album_art_change(current.album_art)
 
     state.current.subscribe(on_current)
 
