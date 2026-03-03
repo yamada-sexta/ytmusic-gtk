@@ -16,6 +16,7 @@ Built with GTK4 and LibAdwaita.
 - Login (partial)
 - Playback (partial)
 - Home Page (partial)
+- Like/dislike
 
 
 
