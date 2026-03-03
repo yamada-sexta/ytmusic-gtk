@@ -106,51 +106,64 @@ class SongDetail(BaseModel):
 def test():
     import logging
 
-    logging.basicConfig(level=logging.DEBUG)
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
 
-    # Add lib to sys.path
-    import sys
-    import os
-    import pathlib
+import unittest
+import ytmusicapi
 
-    sys.path.append(str(pathlib.Path(__file__).parent.parent))
 
-    from lib.net.client import auto_login
+class TestYtMusicDataParsing(unittest.TestCase):
+    yt: ytmusicapi.YTMusic
 
-    yt = auto_login()
-    if not yt:
-        logger.error("Failed to login")
-        return
+    @classmethod
+    def setUpClass(cls):
+        yt = auto_login()
+        if yt is None:
+            raise unittest.SkipTest("Failed to login to YT Music")
+        cls.yt = yt
 
-    logger.info("Testing parsing of History...")
-    try:
-        history_data = yt.get_history()
+    def test_history_parsing(self):
+        history_data = self.yt.get_history()
         songs = Songs.validate_python(history_data)
-        logger.info(f"Successfully parsed {len(songs)} songs from history.")
+        self.assertGreater(len(songs), 0, "History parsed no songs")
+        self.assertIsNotNone(songs[0].video_id, "Returned song missing video_id")
 
-        if songs and songs[0].video_id:
-            video_id = songs[0].video_id
+    def test_song_detail_parsing(self):
+        history_data = self.yt.get_history()
+        songs = Songs.validate_python(history_data)
 
-            logger.info(f"Testing parsing of SongDetail for video_id {video_id}...")
-            song_data = yt.get_song(video_id)
-            song_detail = SongDetail.model_validate(song_data)
-            logger.info(
-                f"Successfully parsed song detail: {song_detail.video_details.title}"
-            )
+        self.assertGreater(len(songs), 0, "Need history to test song detail")
+        self.assertIsNotNone(
+            songs[0].video_id, "Need a video_id from history to test song detail"
+        )
+        video_id = songs[0].video_id
 
-            logger.info(f"Testing parsing of WatchPlaylist for video_id {video_id}...")
-            playlist_data = yt.get_watch_playlist(videoId=video_id)
-            watch_playlist = WatchPlaylist.model_validate(playlist_data)
-            logger.info(
-                f"Successfully parsed watch playlist with {len(watch_playlist.tracks)} tracks."
-            )
+        song_data = self.yt.get_song(video_id)
+        song_detail = SongDetail.model_validate(song_data)
+        self.assertTrue(
+            song_detail.video_details.title, "Parsed SongDetail missing title"
+        )
+        self.assertEqual(
+            song_detail.video_details.video_id, video_id, "Mismatch in video ID"
+        )
 
-    except Exception as e:
-        logger.error(f"Failed to parse: {e}")
-        raise
+    def test_watch_playlist_parsing(self):
+        history_data = self.yt.get_history()
+        songs = Songs.validate_python(history_data)
+
+        self.assertGreater(len(songs), 0, "Need history to test watch playlist")
+        self.assertIsNotNone(
+            songs[0].video_id, "Need a video_id from history to test watch playlist"
+        )
+        video_id = songs[0].video_id
+
+        playlist_data = self.yt.get_watch_playlist(videoId=video_id)
+        watch_playlist = WatchPlaylist.model_validate(playlist_data)
+        self.assertGreater(
+            len(watch_playlist.tracks), 0, "WatchPlaylist parsing returned no tracks"
+        )
 
 
 if __name__ == "__main__":
-    test()
+    from lib.net.client import auto_login
+
+    unittest.main()
