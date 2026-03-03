@@ -145,12 +145,15 @@ def HomeItemCard(
     text_box.set_margin_start(4)  # Indents text slightly from the left edge
     text_box.set_margin_end(4)  # Prevents text from hitting the hard right edge
     # text_box.set_margin_bottom(24)  # Gives the bottom of the card some breathing room
+    # Reserve a fixed minimum height so all cards are the same size regardless of title length.
+    # set_lines(2) is a maximum – a 1-line title would otherwise shrink the card.
+    text_box.set_size_request(-1, 72)
 
     title_lbl = Gtk.Label(label=item.title)
     title_lbl.set_halign(Gtk.Align.START)
     title_lbl.set_xalign(0.0)
 
-    # This combination forces the 2-line height
+    # set_lines(2) caps wrapping at 2 lines; valign=START pins content to the top
     title_lbl.set_wrap(True)
     title_lbl.set_lines(2)
     title_lbl.set_ellipsize(Pango.EllipsizeMode.END)
@@ -318,6 +321,8 @@ def HomeRow(
 
     # 2. Create the horizontal container for the items
     row_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+    # Align children to the top so all cards pin to the top regardless of height
+    row_box.set_valign(Gtk.Align.START)
     # NEW: Add padding around the entire row of items
     row_box.set_margin_start(12)  # Space before the first item
     row_box.set_margin_end(12)  # Space after the last item

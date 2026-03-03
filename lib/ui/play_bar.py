@@ -154,6 +154,8 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
         ops.map(lambda c: c.album_art if c else None),
     )
     thumbnail_widget = ThumbnailWidgetFromUrl(album_art_url_stream)
+    # Set the size to 48x48 to minimum
+    thumbnail_widget.set_size_request(48, 48)
 
     # Two nested Adw.Clamp widgets clamp the thumbnail to 48×48px in both
     # dimensions. Adw.Clamp supports orientation, so one horizontal + one vertical
