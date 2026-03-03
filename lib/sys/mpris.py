@@ -62,12 +62,17 @@ def setup_mpris_controller(state: "PlayerState") -> None:
         # MPRIS length expects microseconds. GStreamer yields nanoseconds.
         length_us: int = state.stream.total_time.value // 1000
 
-        return {
+        metadata = {
             "mpris:trackid": GLib.Variant("s", "/org/mpris/MediaPlayer2/Track/Current"),
             "xesam:title": GLib.Variant("s", current.title or "Unknown Title"),
             "xesam:artist": GLib.Variant("as", [current.artist or "Unknown Artist"]),
             "mpris:length": GLib.Variant("x", length_us),
         }
+
+        if current.album_art:
+            metadata["mpris:artUrl"] = GLib.Variant("s", current.album_art)
+
+        return metadata
 
     def emit_properties_changed(
         interface_name: str, changed_props: Dict[str, GLib.Variant]

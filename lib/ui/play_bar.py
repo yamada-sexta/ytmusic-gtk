@@ -360,7 +360,7 @@ def SystemControls(
     vol_popover.set_child(vol_box)
     vol_btn.set_popover(vol_popover)
 
-    repeat_btn = Gtk.Button(icon_name="media-playlist-repeat-symbolic")
+    repeat_btn = Gtk.Button(icon_name="media-playlist-consecutive-symbolic")
     repeat_btn.add_css_class("flat")
 
     shuffle_btn = Gtk.Button(icon_name="media-playlist-shuffle-symbolic")
@@ -407,16 +407,25 @@ def SystemControls(
 
     vol_scale.connect("value-changed", on_vol_scale_changed)
 
-    state.repeat_on.subscribe(
-        lambda val: toggle_css(repeat_btn, "suggested-action", val)
-    )
+    def on_repeat_changed(val: bool) -> None:
+        toggle_icon(
+            repeat_btn,
+            val,
+            "media-playlist-repeat-symbolic",
+            "media-playlist-consecutive-symbolic",
+        )
+        # toggle_css(repeat_btn, "suggested-action", val)
+
+    state.repeat_on.subscribe(on_repeat_changed)
     repeat_btn.connect(
         "clicked", lambda _: state.repeat_on.on_next(not state.repeat_on.value)
     )
 
-    state.shuffle_on.subscribe(
-        lambda val: toggle_css(shuffle_btn, "suggested-action", val)
-    )
+    def on_shuffle_changed(val: bool) -> None:
+        toggle_css(shuffle_btn, "suggested-action", val)
+        shuffle_btn.set_opacity(1.0 if val else 0.4)
+
+    state.shuffle_on.subscribe(on_shuffle_changed)
     shuffle_btn.connect(
         "clicked", lambda _: state.shuffle_on.on_next(not state.shuffle_on.value)
     )

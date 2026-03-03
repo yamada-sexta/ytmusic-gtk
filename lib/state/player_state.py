@@ -395,11 +395,42 @@ def setup_player(state: PlayerState) -> Gst.Element:
         if not state.current_item:
             return
         if message.type == Gst.MessageType.EOS:
-            play_next(state)
+            # Defer all state changes out of the GStreamer bus callback.
+            # Modifying pipeline state from within a bus signal handler can
+            # silently fail because GStreamer hasn't finished processing the
+            # current message yet.
+            def handle_eos() -> bool:
+                media_list = state.playlist.media.value
+                idx = state.playlist.index.value
+
+                if not state.repeat_on.value:
+                    play_next(state)
+                    return False
+
+                # Repeat is on. Advance the index (wrapping), then seek to
+                # the beginning of the track and start playing. We do this
+                # directly instead of relying on the reactive pipeline because
+                # distinct_until_changed would swallow a re-emission of the
+                # same audio-file path when wrapping back to a previously
+                # played track.
+                if len(media_list) > 1:
+                    next_idx = (idx + 1) % len(media_list)
+                    state.playlist.index.on_next(next_idx)
+
+                player.seek_simple(
+                    Gst.Format.TIME,
+                    Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT,
+                    0,
+                )
+                player.set_state(Gst.State.PLAYING)
+                state.stream.current_time.on_next(0)
+                return False
+
+            GLib.idle_add(handle_eos)
         elif message.type == Gst.MessageType.ERROR:
             err, debug = message.parse_error()
             logging.error(f"GStreamer Error: {err}, {debug}")
-            state.state.on_next(PlayState.PAUSED)
+            GLib.idle_add(lambda: state.state.on_next(PlayState.PAUSED) or False)
 
     bus.connect("message", on_bus_message)
 
