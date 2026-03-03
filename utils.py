@@ -45,16 +45,33 @@ def load_image_async(image_widget: Gtk.Widget, url: str):
             stream = Gio.MemoryInputStream.new_from_bytes(GLib.Bytes.new(data))
             pixbuf = GdkPixbuf.Pixbuf.new_from_stream(stream, None)
             if pixbuf:
+                # Calculate ratio for AspectFrame if it's the parent
+                ratio = pixbuf.get_width() / max(pixbuf.get_height(), 1)
+
                 # update widget appropriately on the main thread
-                if hasattr(image_widget, "set_paintable"):
-                    texture = Gdk.Texture.new_for_pixbuf(pixbuf)
-                    GLib.idle_add(image_widget.set_paintable, texture)
-                elif hasattr(image_widget, "set_from_pixbuf"):
-                    GLib.idle_add(image_widget.set_from_pixbuf, pixbuf)
-                else:
-                    logging.debug(
-                        f"Widget {image_widget} does not support image updates"
-                    )
+                def update_ui():
+                    # We already know pixbuf is not None due to outer check, but Pyrefly needs explicit assurance inside the closure
+                    if pixbuf is None:
+                        return
+                    if hasattr(image_widget, "set_paintable"):
+                        texture = Gdk.Texture.new_for_pixbuf(pixbuf)
+                        image_widget.set_paintable(texture)
+                    elif hasattr(image_widget, "set_from_pixbuf"):
+                        image_widget.set_from_pixbuf(pixbuf)
+                    else:
+                        logging.debug(
+                            f"Widget {image_widget} does not support image updates"
+                        )
+                        return
+
+                    parent = image_widget.get_parent()
+                    if hasattr(Gtk, "AspectFrame") and isinstance(
+                        parent, Gtk.AspectFrame
+                    ):
+                        parent.set_obey_child(False)
+                        parent.set_ratio(ratio)
+
+                GLib.idle_add(update_ui)
         except Exception as e:
             logging.debug(f"Failed to load image {url}: {e}")
 

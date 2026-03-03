@@ -46,10 +46,10 @@ def create_now_playing_view(
 
     art_picture = Gtk.Picture()
     art_picture.set_can_shrink(True)
-    art_picture.set_content_fit(Gtk.ContentFit.CONTAIN)
+    art_picture.set_content_fit(Gtk.ContentFit.FILL)
 
     pic_frame = Gtk.AspectFrame()
-    pic_frame.set_obey_child(True)
+    pic_frame.set_obey_child(False)
     pic_frame.add_css_class("card")
     pic_frame.set_child(art_picture)
 
