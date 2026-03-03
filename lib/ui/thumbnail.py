@@ -9,6 +9,7 @@ from reactivex import Observable
 
 # In-memory cache: url -> raw image bytes
 _IMG_CACHE: dict[str, bytes] = {}
+_PIXBUF_CACHE: dict[str, GdkPixbuf.Pixbuf] = {}
 
 # CSS provider applied once to force internal stack/card minimum sizes to 0.
 # Without this, Gtk.Stack unions its children's natural sizes as its minimum,
@@ -197,6 +198,9 @@ def ThumbnailWidget(
             if gen != _gen[0]:
                 # Superseded by a newer thumbnail value — abort
                 return
+            if url in _PIXBUF_CACHE:
+                GLib.idle_add(_show_picture, _PIXBUF_CACHE[url])
+                return
             data = _fetch_image_bytes(url)
             if gen != _gen[0]:
                 return
@@ -209,6 +213,7 @@ def ThumbnailWidget(
             if pixbuf is None:
                 GLib.idle_add(_show_fallback)
                 return
+            _PIXBUF_CACHE[url] = pixbuf
             GLib.idle_add(_show_picture, pixbuf)
 
         threading.Thread(target=_load, daemon=True).start()

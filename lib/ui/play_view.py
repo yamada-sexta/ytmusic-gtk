@@ -7,8 +7,8 @@ from lib.state.player_state import PlayState
 from gi.repository import Gtk, Adw, GLib, GObject, Pango
 
 
-def create_now_playing_view(
-    state: PlayerState, show_now_playing: BehaviorSubject[bool]
+def NowPlayingView(
+    state: PlayerState,
 ) -> Gtk.Widget:
     """
     Functional component for the Detail 'Now Playing' view.
@@ -28,8 +28,7 @@ def create_now_playing_view(
     # --- Left Pane (Video / Art) ---
     left_pane = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=32)
     left_pane.set_valign(Gtk.Align.CENTER)
-    left_pane.set_halign(Gtk.Align.CENTER)
-    left_pane.set_hexpand(True)
+    left_pane.set_halign(Gtk.Align.FILL)
     left_pane.set_margin_start(32)
     left_pane.set_margin_end(32)
 
@@ -51,9 +50,22 @@ def create_now_playing_view(
         ),
     )
     art_widget = ThumbnailWidget(art_thumbnails_stream)
-    art_widget.set_halign(Gtk.Align.CENTER)
-    art_widget.set_valign(Gtk.Align.CENTER)
-    art_widget.set_hexpand(True)
+    # Tell the widget to fill its new square container
+    art_widget.set_halign(Gtk.Align.FILL)
+    art_widget.set_valign(Gtk.Align.FILL)
+
+    # 1. Force a perfect 1:1 square, ignoring the image's actual dimensions
+    aspect_frame = Gtk.AspectFrame(ratio=1.0, obey_child=False)
+    aspect_frame.set_child(art_widget)
+    aspect_frame.set_halign(Gtk.Align.CENTER)
+    aspect_frame.set_valign(Gtk.Align.CENTER)
+    aspect_frame.set_hexpand(True)
+    aspect_frame.set_vexpand(True)
+
+    # 2. Wrap it in a clamp so it never exceeds a specific width
+    art_clamp = Adw.Clamp(orientation=Gtk.Orientation.HORIZONTAL)
+    art_clamp.set_maximum_size(400)  # Adjust this max width to fit your design
+    art_clamp.set_child(aspect_frame)
 
     click_ctrl = Gtk.GestureClick.new()
 
@@ -65,19 +77,31 @@ def create_now_playing_view(
             state.state.on_next(PlayState.PLAYING)
 
     click_ctrl.connect("pressed", toggle_play)
-    art_widget.add_controller(click_ctrl)
+
+    # You can attach the click controller directly to the clamp or aspect frame
+    art_clamp.add_controller(click_ctrl)
 
     title_label = Gtk.Label(
         label="<span size='x-large' weight='bold'>Loading...</span>", use_markup=True
     )
     title_label.set_ellipsize(Pango.EllipsizeMode.END)
     title_label.set_lines(1)
+    # Add these three lines:
+    title_label.set_halign(Gtk.Align.FILL)  # Fill the available width
+    title_label.set_xalign(0.5)  # Center the text internally
+    title_label.set_max_width_chars(
+        30
+    )  # Stop the label from requesting endless natural width
 
     artist_label = Gtk.Label(label="Artist Name")
     artist_label.set_ellipsize(Pango.EllipsizeMode.END)
     artist_label.set_lines(1)
+    # Add these three lines:
+    artist_label.set_halign(Gtk.Align.FILL)
+    artist_label.set_xalign(0.5)
+    artist_label.set_max_width_chars(30)
 
-    left_pane.append(art_widget)
+    left_pane.append(art_clamp)
     left_pane.append(title_label)
     left_pane.append(artist_label)
 
@@ -193,11 +217,12 @@ def create_now_playing_view(
                 title=media.title or "Unknown Title",
                 subtitle=media.artist or "Unknown Artist",
             )
+
             row.set_title_lines(1)
             row.set_subtitle_lines(1)
             row.set_activatable(True)
-            row.set_margin_top(4)
-            row.set_margin_bottom(4)
+            # row.set_margin_top(4)
+            # row.set_margin_bottom(4)
 
             thumb = ThumbnailWidgetFromUrl(rx.of(media.album_art or None))
             thumb.set_size_request(48, 48)
@@ -215,6 +240,10 @@ def create_now_playing_view(
             v_clamp.set_overflow(Gtk.Overflow.HIDDEN)
             v_clamp.set_child(thumb)
             h_clamp.set_child(v_clamp)
+
+            v_clamp.set_margin_top(8)
+            v_clamp.set_margin_bottom(8)
+
             row.add_prefix(h_clamp)
 
             queue_list.append(row)

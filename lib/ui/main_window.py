@@ -1,7 +1,7 @@
 import ytmusicapi
 from typing import Optional
 import threading
-from lib.ui.play_view import create_now_playing_view
+from lib.ui.play_view import NowPlayingView
 from lib.ui.search_bar import create_search_bar
 from reactivex.subject import BehaviorSubject
 import logging
@@ -129,9 +129,7 @@ class YTMusicWindow(Adw.ApplicationWindow):
         self.main_stack.add_named(main_toolbar_view, "main")
 
         # DETAIL PAGE (Now Playing)
-        now_playing_view = create_now_playing_view(
-            self.player_state, show_now_playing=show_now_playing
-        )
+        now_playing_view = NowPlayingView(self.player_state)
         self.main_stack.add_named(now_playing_view, "now_playing")
 
         # REACTIVE NAVIGATION LOGIC
