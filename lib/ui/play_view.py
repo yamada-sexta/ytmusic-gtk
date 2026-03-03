@@ -34,6 +34,10 @@ def create_now_playing_view(
 
     art_stack = Gtk.Stack()
     art_stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
+    art_stack.set_hhomogeneous(False)
+    art_stack.set_vhomogeneous(False)
+    art_stack.set_halign(Gtk.Align.CENTER)
+    art_stack.set_valign(Gtk.Align.CENTER)
 
     art_fallback = Gtk.Image(icon_name="audio-x-generic-symbolic")
     art_fallback.set_pixel_size(256)
@@ -42,11 +46,15 @@ def create_now_playing_view(
 
     art_picture = Gtk.Picture()
     art_picture.set_can_shrink(True)
-    art_picture.set_content_fit(Gtk.ContentFit.COVER)
-    art_picture.add_css_class("card")
+    art_picture.set_content_fit(Gtk.ContentFit.CONTAIN)
+
+    pic_frame = Gtk.AspectFrame()
+    pic_frame.set_obey_child(True)
+    pic_frame.add_css_class("card")
+    pic_frame.set_child(art_picture)
 
     art_stack.add_named(art_fallback, "fallback")
-    art_stack.add_named(art_picture, "picture")
+    art_stack.add_named(pic_frame, "picture")
 
     # Make the art clickable to toggle play/pause
     click_ctrl = Gtk.GestureClick.new()
@@ -195,56 +203,29 @@ def create_now_playing_view(
             queue_list.remove(child)
 
         for media in media_list:
-
-            # Create marquee labels for title and subtitle to ensure single line with animation on overflow
-            title_lbl = Gtk.Label(label=media.title or "Unknown Title")
-            title_lbl.set_ellipsize(Pango.EllipsizeMode.END)
-            title_lbl.set_lines(1)
-            title_lbl.set_xalign(0.0)
-
-            subtitle_lbl = Gtk.Label(label=media.artist or "Unknown Artist")
-            subtitle_lbl.set_ellipsize(Pango.EllipsizeMode.END)
-            subtitle_lbl.set_lines(1)
-            subtitle_lbl.set_xalign(0.0)
-            subtitle_lbl.add_css_class("dim-label")
-
-            # Create a box to hold the labels
-            label_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            label_box.set_valign(Gtk.Align.CENTER)
-            label_box.append(title_lbl)
-            label_box.append(subtitle_lbl)
-
-            row = Gtk.ListBoxRow()
-
-            row_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-            row_box.set_margin_start(12)
-            row_box.set_margin_end(12)
-            row_box.set_margin_top(8)
-            row_box.set_margin_bottom(8)
-
-            row.set_child(row_box)
+            row = Adw.ActionRow(
+                title=media.title or "Unknown Title",
+                subtitle=media.artist or "Unknown Artist",
+            )
+            row.set_title_lines(1)
+            row.set_subtitle_lines(1)
             row.set_activatable(True)
+
             if media.album_art:
                 from utils import load_image_async
 
-                img_box = Gtk.Box()
-                img_box.set_size_request(48, 48)
-
-                img = Gtk.Picture()
-                img.set_can_shrink(True)
-                img.set_content_fit(Gtk.ContentFit.COVER)
+                img = Gtk.Image()
+                img.set_pixel_size(48)
                 img.add_css_class("card")
                 load_image_async(img, media.album_art)
-                img_box.append(img)
-                row_box.append(img_box)
+                row.add_prefix(img)
             else:
                 img = Gtk.Image(icon_name="audio-x-generic-symbolic")
                 img.set_pixel_size(48)
                 img.add_css_class("card")
                 img.add_css_class("dim-label")
-                row_box.append(img)
+                row.add_prefix(img)
 
-            row_box.append(label_box)
             queue_list.append(row)
 
         _highlight_current_index(state.playlist.index.value)
