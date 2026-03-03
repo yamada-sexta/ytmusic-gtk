@@ -54,22 +54,43 @@ class YTMusicWindow(Adw.ApplicationWindow):
         # Set the stack as the content ABOVE the PlayBar
         root_toolbar_view.set_content(self.main_stack)
 
-        # MAIN APP VIEW (Home/Explore/Search)
-        main_toolbar_view = Adw.ToolbarView()
-        main_toolbar_view.set_top_bar_style(Adw.ToolbarStyle.FLAT)
+        # Global HeaderBar
+        self.header = Adw.HeaderBar()
+        root_toolbar_view.add_top_bar(self.header)
+
+        # Stack for center title widget
+        self.title_stack = Gtk.Stack()
+        self.title_stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
 
         self.view_stack = Adw.ViewStack()
         self.switcher = Adw.ViewSwitcher(
             stack=self.view_stack, policy=Adw.ViewSwitcherPolicy.WIDE
         )
+        self.title_stack.add_named(self.switcher, "main")
+        self.title_stack.add_named(Gtk.Box(), "now_playing")
+        self.header.set_title_widget(self.title_stack)
 
-        header = Adw.HeaderBar()
-        header.set_title_widget(self.switcher)
+        # Stack for start buttons
+        self.start_stack = Gtk.Stack()
+        self.start_stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
 
         self.search_btn = Gtk.ToggleButton(
             icon_name="system-search-symbolic", tooltip_text="Search"
         )
-        header.pack_start(self.search_btn)
+        self.start_stack.add_named(self.search_btn, "main")
+
+        close_btn = Gtk.Button(
+            icon_name="go-down-symbolic", tooltip_text="Close Now Playing"
+        )
+        close_btn.add_css_class("flat")
+        close_btn.connect("clicked", lambda *_: show_now_playing.on_next(False))
+        self.start_stack.add_named(close_btn, "now_playing")
+
+        self.header.pack_start(self.start_stack)
+
+        # Stack for end buttons
+        self.end_stack = Gtk.Stack()
+        self.end_stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
 
         menu = Gio.Menu()
         menu.append("Preferences", "app.preferences")
@@ -77,9 +98,13 @@ class YTMusicWindow(Adw.ApplicationWindow):
         self.menu_btn = Gtk.MenuButton(
             icon_name="open-menu-symbolic", menu_model=menu, tooltip_text="Main Menu"
         )
-        header.pack_end(self.menu_btn)
+        self.end_stack.add_named(self.menu_btn, "main")
+        self.end_stack.add_named(Gtk.Box(), "now_playing")
 
-        main_toolbar_view.add_top_bar(header)
+        self.header.pack_end(self.end_stack)
+
+        # MAIN APP VIEW (Home/Explore/Search)
+        main_toolbar_view = Adw.ToolbarView()
 
         # Search bar setup
         self.search_bar = create_search_bar(self, self.search_btn)
@@ -113,6 +138,9 @@ class YTMusicWindow(Adw.ApplicationWindow):
         def on_nav_state_changed(show: bool):
             target = "now_playing" if show else "main"
             GLib.idle_add(self.main_stack.set_visible_child_name, target)
+            GLib.idle_add(self.title_stack.set_visible_child_name, target)
+            GLib.idle_add(self.start_stack.set_visible_child_name, target)
+            GLib.idle_add(self.end_stack.set_visible_child_name, target)
 
         show_now_playing.subscribe(on_nav_state_changed)
 

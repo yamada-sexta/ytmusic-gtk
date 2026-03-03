@@ -15,24 +15,6 @@ def create_now_playing_view(
     view = Adw.ToolbarView()
 
     # Forces the view to have a solid background (matches light/dark mode automatically)
-    view.add_css_class("background")
-
-    # Manually recreate the header bar
-    header = Adw.HeaderBar()
-    header.set_show_title(False)
-    header.set_show_start_title_buttons(False)
-    header.set_show_end_title_buttons(False)
-
-    # Create a close button with a flat style to look like a native nav button
-    close_btn = Gtk.Button(icon_name="go-down-symbolic")
-    close_btn.add_css_class("flat")
-    close_btn.set_tooltip_text("Close Now Playing")
-
-    # Reactively tell the state to close this view
-    close_btn.connect("clicked", lambda *_: show_now_playing.on_next(False))
-    header.pack_start(close_btn)
-
-    view.add_top_bar(header)
 
     # Main Content Box
     split_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
