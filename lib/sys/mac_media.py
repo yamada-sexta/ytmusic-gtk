@@ -19,6 +19,7 @@ def setup_mac_media_controller(state: "PlayerState") -> None:
 
     try:
         from Foundation import NSNumber, NSMutableDictionary  # type: ignore
+        from AppKit import NSImage  # type: ignore
         from MediaPlayer import MPNowPlayingInfoCenter  # type: ignore
         from MediaPlayer import MPRemoteCommandCenter  # type: ignore
         from MediaPlayer import MPNowPlayingInfoPropertyElapsedPlaybackTime  # type: ignore
@@ -26,13 +27,17 @@ def setup_mac_media_controller(state: "PlayerState") -> None:
         from MediaPlayer import MPMediaItemPropertyTitle  # type: ignore
         from MediaPlayer import MPMediaItemPropertyArtist  # type: ignore
         from MediaPlayer import MPMediaItemPropertyPlaybackDuration  # type: ignore
+        from MediaPlayer import MPMediaItemPropertyArtwork  # type: ignore
         from MediaPlayer import MPRemoteCommandHandlerStatusSuccess  # type: ignore
+        from MediaPlayer import MPMediaItemArtwork  # type: ignore
     except ImportError:
         logging.error("macOS MediaPlayer framework or PyObjC not available.")
         return
 
     info_center = MPNowPlayingInfoCenter.defaultCenter()  # type: ignore
     command_center = MPRemoteCommandCenter.sharedCommandCenter()  # type: ignore
+
+    _artwork_cache: dict[str, Any] = {}
 
     # --- Helper Functions (Closures over `state`) ---
 
@@ -50,6 +55,8 @@ def setup_mac_media_controller(state: "PlayerState") -> None:
             now_playing_info[MPMediaItemPropertyTitle] = current.title
         if current.artist:
             now_playing_info[MPMediaItemPropertyArtist] = current.artist
+        if current.album_art and current.album_art in _artwork_cache:
+            now_playing_info[MPMediaItemPropertyArtwork] = _artwork_cache[current.album_art]
 
         # MPRIS streams use nanoseconds. macOS uses seconds.
         total_time_s: float = state.stream.total_time.value / 1e9
@@ -109,18 +116,26 @@ def setup_mac_media_controller(state: "PlayerState") -> None:
         GLib.idle_add(lambda: play_previous(state))
         return MPRemoteCommandHandlerStatusSuccess
 
+    def on_change_playback_position(event: Any) -> int:
+        position_s = event.positionTime()
+        position_ns = int(position_s * 1e9)
+        GLib.idle_add(lambda: state.stream.seek_request.on_next(position_ns))
+        return MPRemoteCommandHandlerStatusSuccess
+
     # --- Add Targets ---
     command_center.playCommand().addTargetWithHandler_(on_play)
     command_center.pauseCommand().addTargetWithHandler_(on_pause)
     command_center.togglePlayPauseCommand().addTargetWithHandler_(on_toggle_play_pause)
     command_center.nextTrackCommand().addTargetWithHandler_(on_next_track)
     command_center.previousTrackCommand().addTargetWithHandler_(on_previous_track)
+    command_center.changePlaybackPositionCommand().addTargetWithHandler_(on_change_playback_position)
 
     command_center.playCommand().setEnabled_(True)
     command_center.pauseCommand().setEnabled_(True)
     command_center.togglePlayPauseCommand().setEnabled_(True)
     command_center.nextTrackCommand().setEnabled_(True)
     command_center.previousTrackCommand().setEnabled_(True)
+    command_center.changePlaybackPositionCommand().setEnabled_(True)
 
     # --- Reactive Subscriptions ---
 
@@ -134,11 +149,37 @@ def setup_mac_media_controller(state: "PlayerState") -> None:
         if not current:
             update_now_playing_info()
             return
+
+        art_url = current.album_art
+        if art_url and art_url not in _artwork_cache:
+            def _fetch_artwork(url: str) -> None:
+                from lib.ui.thumbnail import _fetch_image_bytes
+
+                try:
+                    data = _fetch_image_bytes(url)
+                    if data:
+                        image = NSImage.alloc().initWithData_(data)
+                        if image:
+                            artwork = MPMediaItemArtwork.alloc().initWithBoundsSize_requestHandler_(
+                                image.size(), lambda size: image
+                            )
+                            _artwork_cache[url] = artwork
+                            GLib.idle_add(update_now_playing_info)
+                except Exception as e:
+                    logging.warning(f"Failed to fetch artwork for mac media: {e}")
+
+            import threading
+            threading.Thread(target=_fetch_artwork, args=(art_url,), daemon=True).start()
+
         combine_latest(
             state.current.pipe(ops.filter(lambda c: c is not None)),
             state.stream.total_time,
         ).subscribe(on_metadata_changed)
 
+    def on_seek_request(_position: int) -> None:
+        GLib.idle_add(update_now_playing_info)
+
     # Attach listeners to the state
     state.state.subscribe(on_playback_status_changed)
     state.current.subscribe(on_current_changed)
+    state.stream.seek_request.subscribe(on_seek_request)
