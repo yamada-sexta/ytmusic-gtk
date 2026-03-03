@@ -305,8 +305,6 @@ def setup_player(state: PlayerState) -> Gst.Element:
     Initializes the GStreamer player and MPRIS controller, binding them to
     the given PlayerState via functional reactive streams.
     """
-    from lib.sys.mpris import setup_mpris_controller
-
     if not Gst.is_initialized():
         Gst.init(None)
 
@@ -445,6 +443,15 @@ def setup_player(state: PlayerState) -> Gst.Element:
 
     state.current.subscribe(on_current)
 
-    setup_mpris_controller(state)
+    import sys
+
+    if sys.platform.startswith("linux"):
+        from lib.sys.mpris import setup_mpris_controller
+
+        setup_mpris_controller(state)
+    elif sys.platform == "darwin":
+        from lib.sys.mac_media import setup_mac_media_controller
+
+        setup_mac_media_controller(state)
 
     return player

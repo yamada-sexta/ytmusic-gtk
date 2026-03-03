@@ -10,6 +10,7 @@ dependencies = [
     "pycookiecheat>=0.8.0",
     "pydantic>=2.12.5",
     "pygobject>=3.56.0",
+    "pyobjc-framework-mediaplayer>=12.1 ; sys_platform == 'darwin'",
     "pywebview>=6.1",
     "reactivex>=4.1.0",
     "yt-dlp[default]>=2026.2.21",
