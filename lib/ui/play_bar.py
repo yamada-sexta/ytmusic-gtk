@@ -1,6 +1,6 @@
 import logging
 import ytmusicapi
-from lib.utils import ThumbnailWidgetFromUrl
+from lib.ui.thumbnail import ThumbnailWidgetFromUrl
 from lib.state.player_state import LikeStatus
 from lib.state.player_state import MediaStatus
 from reactivex.subject import BehaviorSubject

@@ -1,4 +1,4 @@
-from lib.utils import ThumbnailWidget, ThumbnailWidgetFromUrl
+from lib.ui.thumbnail import ThumbnailWidget, ThumbnailWidgetFromUrl
 from typing import Optional
 from lib.state.player_state import MediaStatus
 from reactivex.subject import BehaviorSubject

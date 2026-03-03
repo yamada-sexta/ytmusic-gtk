@@ -1,6 +1,6 @@
 from lib.state.player_state import LikeStatus
 from lib.state.player_state import MediaStatus
-from lib.utils import ThumbnailWidget
+from lib.ui.thumbnail import ThumbnailWidget
 from reactivex import Subject
 from typing import Tuple
 from lib.data import Album, Artist, BaseMedia

@@ -1,6 +1,6 @@
 from typing import Tuple
 from typing import Any
-from lib.utils import ThumbnailWidget
+from lib.ui.thumbnail import ThumbnailWidget
 from reactivex.subject import BehaviorSubject
 import ytmusicapi
 import threading

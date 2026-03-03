@@ -24,7 +24,7 @@ def _apply_thumbnail_css() -> None:
     _THUMBNAIL_CSS = Gtk.CssProvider()
     _THUMBNAIL_CSS.load_from_string(
         ".thumbnail-stack { min-width: 0px; min-height: 0px; }"
-        " .thumbnail-card { min-width: 0px; min-height: 0px; }"
+        " .thumbnail-card { min-width: 0px; min-height: 0px; overflow: hidden; }"
     )
     display = Gdk.Display.get_default()
     if display:
