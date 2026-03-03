@@ -1,3 +1,4 @@
+from lib.state.player_state import RepeatMode
 import logging
 import ytmusicapi
 from lib.ui.thumbnail import ThumbnailWidgetFromUrl
@@ -407,18 +408,27 @@ def SystemControls(
 
     vol_scale.connect("value-changed", on_vol_scale_changed)
 
-    def on_repeat_changed(val: bool) -> None:
-        toggle_icon(
-            repeat_btn,
-            val,
-            "media-playlist-repeat-symbolic",
-            "media-playlist-consecutive-symbolic",
-        )
+    def on_repeat_changed(val: RepeatMode) -> None:
+        # toggle_icon(
+        #     repeat_btn,
+        #     val == RepeatMode.ALL,
+        #     "media-playlist-repeat-symbolic",
+        #     "media-playlist-consecutive-symbolic",
+        # )
+        if val == RepeatMode.OFF:
+            repeat_btn.set_icon_name("media-playlist-consecutive-symbolic")
+        elif val == RepeatMode.ALL:
+            repeat_btn.set_icon_name("media-playlist-repeat-symbolic")
+        elif val == RepeatMode.ONE:
+            repeat_btn.set_icon_name("media-playlist-repeat-song-symbolic")
         # toggle_css(repeat_btn, "suggested-action", val)
 
-    state.repeat_on.subscribe(on_repeat_changed)
+    state.repeat_mode.subscribe(on_repeat_changed)
     repeat_btn.connect(
-        "clicked", lambda _: state.repeat_on.on_next(not state.repeat_on.value)
+        "clicked",
+        lambda _: state.repeat_mode.on_next(
+            RepeatMode((state.repeat_mode.value.value + 1) % 3)
+        ),
     )
 
     def on_shuffle_changed(val: bool) -> None:

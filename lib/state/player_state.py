@@ -27,6 +27,12 @@ class PlayState(enum.Enum):
     LOADING = 3
 
 
+class RepeatMode(enum.Enum):
+    OFF = 0
+    ALL = 1
+    ONE = 2
+
+
 LikeStatus = Literal["INDIFFERENT", "LIKE", "DISLIKE"]
 
 
@@ -92,8 +98,8 @@ class PlayerState:
     shuffle_on: BehaviorSubject[bool] = field(
         default_factory=lambda: BehaviorSubject(False)
     )
-    repeat_on: BehaviorSubject[bool] = field(
-        default_factory=lambda: BehaviorSubject(False)
+    repeat_mode: BehaviorSubject[RepeatMode] = field(
+        default_factory=lambda: BehaviorSubject(RepeatMode.OFF)
     )
 
     playlist: CurrentPlaylist = field(default_factory=CurrentPlaylist)
@@ -272,7 +278,7 @@ def play_next(state: PlayerState) -> None:
     else:
         next_idx = idx + 1
         if next_idx >= len(media_list):
-            if state.repeat_on.value:
+            if state.repeat_mode.value == RepeatMode.ALL:
                 next_idx = 0
             else:
                 state.state.on_next(PlayState.PAUSED)
@@ -293,7 +299,7 @@ def play_previous(state: PlayerState) -> None:
     else:
         next_idx = idx - 1
         if next_idx < 0:
-            if state.repeat_on.value:
+            if state.repeat_mode.value == RepeatMode.ALL:
                 next_idx = len(media_list) - 1
             else:
                 next_idx = 0
@@ -396,34 +402,18 @@ def setup_player(state: PlayerState) -> Gst.Element:
             return
         if message.type == Gst.MessageType.EOS:
             # Defer all state changes out of the GStreamer bus callback.
-            # Modifying pipeline state from within a bus signal handler can
-            # silently fail because GStreamer hasn't finished processing the
-            # current message yet.
             def handle_eos() -> bool:
-                media_list = state.playlist.media.value
-                idx = state.playlist.index.value
-
-                if not state.repeat_on.value:
-                    play_next(state)
+                if state.repeat_mode.value == RepeatMode.ONE:
+                    player.seek_simple(
+                        Gst.Format.TIME,
+                        Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT,
+                        0,
+                    )
+                    player.set_state(Gst.State.PLAYING)
+                    state.stream.current_time.on_next(0)
                     return False
 
-                # Repeat is on. Advance the index (wrapping), then seek to
-                # the beginning of the track and start playing. We do this
-                # directly instead of relying on the reactive pipeline because
-                # distinct_until_changed would swallow a re-emission of the
-                # same audio-file path when wrapping back to a previously
-                # played track.
-                if len(media_list) > 1:
-                    next_idx = (idx + 1) % len(media_list)
-                    state.playlist.index.on_next(next_idx)
-
-                player.seek_simple(
-                    Gst.Format.TIME,
-                    Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT,
-                    0,
-                )
-                player.set_state(Gst.State.PLAYING)
-                state.stream.current_time.on_next(0)
+                play_next(state)
                 return False
 
             GLib.idle_add(handle_eos)

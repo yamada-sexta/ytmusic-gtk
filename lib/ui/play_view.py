@@ -92,7 +92,7 @@ def create_now_playing_view(
     # 1. Tabs Header
     tabs_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=24)
     tabs_box.set_halign(Gtk.Align.CENTER)
-    for tab_name in ["UP NEXT", "LYRICS", "RELATED"]:
+    for tab_name in ("UP NEXT", "LYRICS", "RELATED"):
         btn = Gtk.Button(label=tab_name)
         btn.add_css_class("flat")
         if tab_name != "UP NEXT":
@@ -196,6 +196,8 @@ def create_now_playing_view(
             row.set_title_lines(1)
             row.set_subtitle_lines(1)
             row.set_activatable(True)
+            row.set_margin_top(4)
+            row.set_margin_bottom(4)
 
             thumb = ThumbnailWidgetFromUrl(rx.of(media.album_art or None))
             thumb.set_size_request(48, 48)
