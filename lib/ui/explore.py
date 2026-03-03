@@ -83,7 +83,10 @@ def build_trending_list(trending_data: Trending) -> Adw.PreferencesGroup:
         if item.views:
             creator += f" • {item.views}"
 
-        row = Adw.ActionRow(title=item.title, subtitle=creator)
+        row = Adw.ActionRow(
+            title=GLib.markup_escape_text(item.title or ""),
+            subtitle=GLib.markup_escape_text(creator or "")
+        )
 
         # 1. Rank Number
         rank_lbl = Gtk.Label(label=f"{i + 1}")

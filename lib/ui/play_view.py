@@ -214,8 +214,8 @@ def NowPlayingView(
 
         for media in media_list:
             row = Adw.ActionRow(
-                title=media.title or "Unknown Title",
-                subtitle=media.artist or "Unknown Artist",
+                title=GLib.markup_escape_text(media.title or "Unknown Title"),
+                subtitle=GLib.markup_escape_text(media.artist or "Unknown Artist"),
             )
 
             row.set_title_lines(1)
