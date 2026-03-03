@@ -9,7 +9,7 @@ from lib.ui.helpers import toggle_icon
 from lib.ui.helpers import format_time
 from lib.state.player_state import PlayState
 from typing import Optional
-from gi.repository import Gtk, GLib, Adw, Pango, Gst
+from gi.repository import Gtk, GLib, Adw, Pango, Gst, Gio, Gdk
 from reactivex import combine_latest
 from lib.state.player_state import PlayerState, play_next, play_previous
 
@@ -204,8 +204,39 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
     like_btn = Gtk.Button(icon_name="thumbs-up-outline-symbolic")
     like_btn.add_css_class("flat")
 
-    more_btn = Gtk.Button(icon_name="view-more-symbolic")
+    more_popover = Gtk.Popover()
+    more_popover.set_has_arrow(True)
+
+    more_menu_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+    # more_menu_box.set_margin_top(4)
+    # more_menu_box.set_margin_bottom(4)
+    # more_menu_box.set_margin_start(4)
+    # more_menu_box.set_margin_end(4)
+
+    open_in_browser_content = Adw.ButtonContent()
+    open_in_browser_content.set_icon_name("folder-globe-legacy-symbolic")
+    open_in_browser_content.set_label("Open in Browser")
+
+    open_in_browser_btn = Gtk.Button()
+    open_in_browser_btn.set_child(open_in_browser_content)
+    open_in_browser_btn.add_css_class("flat")
+
+    def on_open_in_browser(_btn: Gtk.Button) -> None:
+        current = state.current_item
+        if not current:
+            return
+        more_popover.popdown()
+        url = f"https://music.youtube.com/watch?v={current.id}"
+        Gtk.show_uri(None, url, Gdk.CURRENT_TIME)
+
+    open_in_browser_btn.connect("clicked", on_open_in_browser)
+    more_menu_box.append(open_in_browser_btn)
+
+    more_popover.set_child(more_menu_box)
+
+    more_btn = Gtk.MenuButton(icon_name="view-more-symbolic")
     more_btn.add_css_class("flat")
+    more_btn.set_popover(more_popover)
 
     actions_box.append(dislike_btn)
     actions_box.append(like_btn)
