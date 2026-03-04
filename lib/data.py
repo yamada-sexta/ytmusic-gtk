@@ -1,3 +1,4 @@
+from ytmusicapi import LikeStatus
 from pydantic import TypeAdapter
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
@@ -32,11 +33,21 @@ class PodcastInfo(BaseModel):
 
 
 class BaseMedia(BaseModel):
+    """
+    Base class for media items
+    New media types should inherit from this
+    """
+
     title: str
+    # An item with video id doesn't have to be a video
     video_id: Optional[str] = Field(None, alias="videoId")
     browse_id: Optional[str] = Field(None, alias="browseId")
-    artists: Optional[list[Artist]] = None
-    thumbnails: Optional[list[Thumbnail]] = None
+    artists: Optional[list[Artist]] = Field(None, alias="artists")
+    thumbnails: Optional[list[Thumbnail]] = Field(None, alias="thumbnails")
+    like_status: Optional[Literal["LIKE", "DISLIKE", "INDIFFERENT"]] = Field(
+        None, alias="likeStatus"
+    )
+    in_library: Optional[bool] = Field(None, alias="inLibrary")
 
 
 class Song(BaseMedia):
@@ -46,10 +57,8 @@ class Song(BaseMedia):
 
 class Track(BaseMedia):
     length: str
-    like_status: Optional[Literal["INDIFFERENT", "LIKE", "DISLIKE"]] = Field(
-        None, alias="likeStatus"
-    )
     video_type: Optional[str] = Field(None, alias="videoType")
+
     in_library: Optional[bool] = Field(None, alias="inLibrary")
     album: Optional[Album] = None
     year: Optional[str] = None
@@ -103,6 +112,39 @@ class SongDetail(BaseModel):
     microformat: Microformat
 
 
+class AlbumTrack(BaseMedia):
+    # title: str
+    # artists: Optional[list[Artist]] = None
+    duration_seconds: Optional[int] = Field(None, alias="duration_seconds")
+    duration: Optional[str] = None
+    views: Optional[str] = None
+    is_explicit: bool = Field(False, alias="isExplicit")
+    is_available: bool = Field(True, alias="isAvailable")
+
+    album: Optional[str] = None
+    feedback_tokens: Optional[dict[str, str]] = Field(None, alias="feedbackTokens")
+    in_library: Optional[bool] = Field(None, alias="inLibrary")
+    video_type: Optional[str] = Field(None, alias="videoType")
+    track_number: Optional[int] = Field(None, alias="trackNumber")
+
+
+class AlbumData(BaseModel):
+    title: str
+    type: str
+    thumbnails: list[Thumbnail]
+    artists: list[Artist]
+    year: Optional[str] = None
+    track_count: Optional[int] = Field(None, alias="trackCount")
+    duration: Optional[str] = None
+    duration_seconds: Optional[int] = Field(None, alias="duration_seconds")
+    audio_playlist_id: Optional[str] = Field(None, alias="audioPlaylistId")
+    tracks: list[AlbumTrack] = []
+    description: Optional[str] = None
+    other_versions: Optional[list[dict]] = Field(None, alias="other_versions")
+    is_explicit: bool = Field(False, alias="isExplicit")
+    like_status: Optional[str] = Field(None, alias="likeStatus")
+
+
 def test():
     import logging
 
@@ -116,6 +158,8 @@ class TestYtMusicDataParsing(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        from lib.net.client import auto_login
+
         yt = auto_login()
         if yt is None:
             raise unittest.SkipTest("Failed to login to YT Music")
@@ -161,6 +205,29 @@ class TestYtMusicDataParsing(unittest.TestCase):
         self.assertGreater(
             len(watch_playlist.tracks), 0, "WatchPlaylist parsing returned no tracks"
         )
+
+    def test_album_parsing(self):
+        import json
+
+        # Use a known album browseId (Petal Lament by MIMI)
+        browse_id = "MPREb_cTw5MfVwmhd"
+        raw_album = self.yt.get_album(browse_id)
+
+        # Log the raw response for inspection
+        with open("debug_album_response.json", "w") as f:
+            json.dump(raw_album, f, indent=2)
+
+        album = AlbumData.model_validate(raw_album)
+        self.assertTrue(album.title, "Album title is empty")
+        self.assertGreater(len(album.tracks), 0, "Album has no tracks")
+        self.assertIsNotNone(album.audio_playlist_id, "Album missing audioPlaylistId")
+        self.assertGreater(len(album.thumbnails), 0, "Album has no thumbnails")
+        self.assertGreater(len(album.artists), 0, "Album has no artists")
+
+        # Validate first track has essential fields
+        first_track = album.tracks[0]
+        self.assertTrue(first_track.title, "First track title is empty")
+        self.assertIsNotNone(first_track.video_id, "First track missing video_id")
 
 
 if __name__ == "__main__":

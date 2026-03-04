@@ -26,6 +26,9 @@ class HomeItemData(BaseMedia):
     is_explicit: Optional[bool] = Field(None, alias="isExplicit")
     album: Optional[Album] = None
 
+    # Albums & Singles
+    audio_playlist_id: Optional[str] = Field(None, alias="audioPlaylistId")
+
     # Playlists & Mixes
     description: Optional[str] = None
     count: Optional[str] = None
@@ -219,6 +222,7 @@ def HomeItemCard(
                 return
 
         if item.playlist_id:
+            logging.info(f"Playing playlist: {item}")
             video_id = item.video_id
             start_play(
                 state=player_state,
@@ -228,7 +232,15 @@ def HomeItemCard(
             return
 
         if not item.video_id:
-            logging.warning("Item has no video ID, cannot play.")
+            if item.audio_playlist_id:
+                logging.info(
+                    f"Playing album/single via audioPlaylistId: {item.audio_playlist_id}"
+                )
+                start_play(state=player_state, playlist_id=item.audio_playlist_id)
+                return
+
+            logging.warning("Item has no video ID or audio playlist ID, cannot play.")
+            logging.debug(f"Item: {item}")
             player_state.state.on_next(PlayState.EMPTY)
             return
 
