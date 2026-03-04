@@ -9,7 +9,7 @@ from gi.repository import Gtk, Adw, GLib, GObject, Pango
 
 def NowPlayingView(
     state: PlayerState,
-) -> Gtk.Widget:
+) -> Adw.ToolbarView:
     """
     Functional component for the Detail 'Now Playing' view.
     """

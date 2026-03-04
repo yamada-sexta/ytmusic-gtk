@@ -36,11 +36,11 @@ class YTMusicWindow(Adw.ApplicationWindow):
         self.player_state = PlayerState(yt=yt_subject)
         self._player = setup_player(self.player_state)
 
+        show_now_playing = BehaviorSubject(False)
+
         # ROOT CONTAINER (Anchors the PlayBar globally)
         root_toolbar_view = Adw.ToolbarView()
         self.set_content(root_toolbar_view)
-
-        show_now_playing = BehaviorSubject(False)
 
         # The PlayBar is securely fastened to the bottom of the window
         root_toolbar_view.add_bottom_bar(PlayBar(self.player_state, show_now_playing))
@@ -57,16 +57,13 @@ class YTMusicWindow(Adw.ApplicationWindow):
         inner_toolbar_view = Adw.ToolbarView()
         root_nav_page.set_child(inner_toolbar_view)
 
-        # The animated stack (Slides up/down between Main and Now Playing)
+        # The animated stack (slides up/down between Main and Now Playing)
         self.main_stack = Gtk.Stack()
-
-        # Change SLIDE_UP_DOWN to OVER_UP_DOWN
         self.main_stack.set_transition_type(Gtk.StackTransitionType.OVER_UP_DOWN)
-        self.main_stack.set_transition_duration(350)  # 350ms smooth transition
-
+        self.main_stack.set_transition_duration(350)
         inner_toolbar_view.set_content(self.main_stack)
 
-        # Global HeaderBar (on inner_toolbar_view so pushed pages cover it)
+        # Global HeaderBar (on inner_toolbar_view so it stays persistent)
         self.header = Adw.HeaderBar()
         inner_toolbar_view.add_top_bar(self.header)
 
@@ -152,11 +149,16 @@ class YTMusicWindow(Adw.ApplicationWindow):
 
         # REACTIVE NAVIGATION LOGIC
         def on_nav_state_changed(show: bool):
-            target = "now_playing" if show else "main"
-            GLib.idle_add(self.main_stack.set_visible_child_name, target)
-            GLib.idle_add(self.title_stack.set_visible_child_name, target)
-            GLib.idle_add(self.start_stack.set_visible_child_name, target)
-            GLib.idle_add(self.end_stack.set_visible_child_name, target)
+            def _update():
+                # Pop any pushed pages so Now Playing is never covered
+                if show:
+                    self.nav_view.pop_to_page(root_nav_page)
+                target = "now_playing" if show else "main"
+                self.main_stack.set_visible_child_name(target)
+                self.title_stack.set_visible_child_name(target)
+                self.start_stack.set_visible_child_name(target)
+                self.end_stack.set_visible_child_name(target)
+            GLib.idle_add(_update)
 
         show_now_playing.subscribe(on_nav_state_changed)
 
