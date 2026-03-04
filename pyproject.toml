@@ -14,7 +14,6 @@ dependencies = [
     "pyside6>=6.10.2",
     "pywebview>=6.1",
     "reactivex>=4.1.0",
-    "setproctitle>=1.3.7",
     "yt-dlp[default]>=2026.2.21",
     "ytmusicapi>=1.11.5",
 ]
