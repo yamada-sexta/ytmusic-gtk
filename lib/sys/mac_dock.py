@@ -18,8 +18,8 @@ def setup_macos_dock_handler(app: "YTMusicApp") -> None:
         return
 
     try:
-        import objc 
-        from AppKit import NSApplication, NSObject 
+        import objc  # type: ignore
+        from AppKit import NSApplication, NSObject
         from gi.repository import GLib
 
         ns_app = NSApplication.sharedApplication()

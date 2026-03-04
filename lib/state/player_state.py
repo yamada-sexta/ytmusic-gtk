@@ -444,8 +444,8 @@ def setup_player(state: PlayerState) -> Gst.Element:
         if not current:
             return
 
-        yt_instance = state.yt.value
-        if not current.audio_file.value and yt_instance:
+        yt_instance = state.client
+        if not current.audio_file.value:
             state.state.on_next(PlayState.LOADING)
             import threading
 

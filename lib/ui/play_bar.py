@@ -306,9 +306,10 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
         )
         current.like_status.on_next(new_status)
 
-        yt = state.yt.value
-        if yt:
-            _rate_song_remote(yt, current.id, new_status)
+        yt = state.client
+        # if yt:
+        #     _rate_song_remote(yt, current.id, new_status)
+        yt.rate_song(current.id, new_status)
 
     def on_dislike_clicked(_) -> None:
         current = state.current_item
@@ -320,9 +321,10 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
         )
         current.like_status.on_next(new_status)
 
-        yt = state.yt.value
-        if yt:
-            _rate_song_remote(yt, current.id, new_status)
+        yt = state.client
+        # if yt:
+        #     _rate_song_remote(yt, current.id, new_status)
+        yt.rate_song(current.id, new_status)
 
     like_btn.connect("clicked", on_like_clicked)
     dislike_btn.connect("clicked", on_dislike_clicked)

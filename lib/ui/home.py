@@ -470,9 +470,7 @@ def HomePage(
     # current_yt_instance = BehaviorSubject[Optional[ytmusicapi.YTMusic]](None)
     row_cache = {}
 
-    home_page_subject = BehaviorSubject[Tuple[HomePageType, bool, Optional[YTClient]]](
-        ([], True, None)
-    )
+    home_page_subject = client.get_home(limit=current_limit)
     scroll_subject = Subject()
 
     def reset_home_page():
@@ -481,9 +479,9 @@ def HomePage(
         row_cache.clear()
         has_more.on_next(True)
 
-    def update_ui(home: HomePageType, is_reset: bool, client: YTClient) -> bool:
-        if is_reset:
-            reset_home_page()
+    def update_ui(home: list[HomeSectionData]) -> bool:
+        # if is_reset:
+        #     reset_home_page()
 
         # Beautiful Native Loading State
         if not client:
@@ -506,7 +504,7 @@ def HomePage(
             return GLib.SOURCE_REMOVE
 
         # Beautiful Native Error State
-        if len(home) == 0 and is_reset:
+        if len(home) == 0:
             is_loading.on_next(False)
             error_page = Adw.StatusPage()
             error_page.set_icon_name("network-error-symbolic")
@@ -546,13 +544,14 @@ def HomePage(
 
         return GLib.SOURCE_REMOVE
 
-    # --- RX CALLBACKS (No lambdas) ---
-    def on_home_data_next(
-        data_tuple: Tuple[HomePageType, bool, Optional[YTClient]],
-    ):
-        home_data, is_reset, client = data_tuple
+    def on_home_data_next(data: Optional[tuple[list[HomeSectionData], dict]]):
+        # home_data, is_reset, client = data_tuple
+        if data is None:
+            logging.error("Received None data for home page, skipping update.")
+            return
+        home_data, _ = data
         # Pass arguments explicitly to avoid lambda wrapping
-        GLib.idle_add(update_ui, home_data, is_reset, client)
+        GLib.idle_add(update_ui, home_data)
 
     def on_rx_error(e):
         logging.error(f"Rx Error: {e}")
@@ -562,23 +561,23 @@ def HomePage(
         on_error=on_rx_error,
     )
 
-    # --- BACKGROUND FETCH LOGIC ---
-    def fetch_home_data(client: YTClient, limit: int, is_reset: bool):
-        try:
-            raw_home = client.get_home(limit=limit)
-            # Write the raw response to a JSON file for debugging
-            import json
+    # # --- BACKGROUND FETCH LOGIC ---
+    # def fetch_home_data(client: YTClient, limit: int, is_reset: bool):
+    #     try:
+    #         raw_home = client.get_home(limit=limit)
+    #         # Write the raw response to a JSON file for debugging
+    #         import json
 
-            with open("debug_home_response.json", "w") as f:
-                json.dump(raw_home, f, indent=4)
-            home_data = HomePageTypeAdapter.validate_python(raw_home)
-            home_page_subject.on_next((home_data, is_reset, client))
-        except Exception as e:
-            logging.error(f"Failed to fetch home data: {e}")
-            if is_reset:
-                home_page_subject.on_next(([], is_reset, None))
-            else:
-                home_page_subject.on_next(([], False, client))
+    #         with open("debug_home_response.json", "w") as f:
+    #             json.dump(raw_home, f, indent=4)
+    #         home_data = HomePageTypeAdapter.validate_python(raw_home)
+    #         home_page_subject.on_next((home_data, is_reset, client))
+    #     except Exception as e:
+    #         logging.error(f"Failed to fetch home data: {e}")
+    #         if is_reset:
+    #             home_page_subject.on_next(([], is_reset, None))
+    #         else:
+    #             home_page_subject.on_next(([], False, client))
 
     def trigger_load_more(dummy_value=None):
         if is_loading.value:
@@ -586,17 +585,18 @@ def HomePage(
         logging.info("Fetching more data...")
         is_loading.on_next(True)
         bottom_spinner_box.set_visible(True)
-        new_limit = current_limit.value + 5
-        current_limit.on_next(new_limit)
-        threading.Thread(
-            target=fetch_home_data,
-            args=(
-                yt_subject.value,
-                new_limit,
-                False,
-            ),  # False = don't reset UI
-            daemon=True,
-        ).start()
+        # new_limit = current_limit.value + 5
+        # current_limit.on_next(new_limit)
+        # threading.Thread(
+        #     target=fetch_home_data,
+        #     args=(
+        #         yt_subject.value,
+        #         new_limit,
+        #         False,
+        #     ),  # False = don't reset UI
+        #     daemon=True,
+        # ).start()
+        current_limit.on_next(current_limit.value + 5)
 
     def on_edge_reached(sw: Gtk.ScrolledWindow, pos: Gtk.PositionType):
         if pos == Gtk.PositionType.BOTTOM:
@@ -605,27 +605,10 @@ def HomePage(
     scrolled.connect("edge-reached", on_edge_reached)
 
     def check_scroll_valid(dummy_value) -> bool:
-        return not is_loading.value and yt_subject.value is not None and has_more.value
+        return not is_loading.value and has_more.value
 
     scroll_subject.pipe(ops.filter(check_scroll_valid)).subscribe(
         on_next=trigger_load_more, on_error=on_rx_error
     )
-
-    def on_yt_changed(client: Optional[YTClient]) -> None:
-        if client is None:
-            logging.info("YT Music instance is None, showing error message.")
-            return
-
-        current_limit.on_next(5)
-        is_loading.on_next(True)
-
-        # FIXED: Added the explicit `True` argument for `is_reset`
-        threading.Thread(
-            target=fetch_home_data,
-            args=(client, current_limit.value, True),
-            daemon=True,
-        ).start()
-
-    yt_subject.subscribe(on_next=on_yt_changed, on_error=on_rx_error)
 
     return scrolled

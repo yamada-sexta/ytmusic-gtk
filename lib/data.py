@@ -182,9 +182,17 @@ class ServiceTrackingParam(BaseModel):
     params: list[Param]
 
 
+class ConsistencyTokenJar(BaseModel):
+    encrypted_token_jar_contents: str = Field(alias="encryptedTokenJarContents")
+    expiration_seconds: str = Field(alias="expirationSeconds")
+
+
 class ResponseContext(BaseModel):
     service_tracking_params: list[ServiceTrackingParam] = Field(
         alias="serviceTrackingParams"
+    )
+    consistency_token_jar: Optional[ConsistencyTokenJar] = Field(
+        None, alias="consistencyTokenJar"
     )
 
 
@@ -193,8 +201,6 @@ class Run(BaseModel):
 
 
 class FormattedText(BaseModel):
-    """YouTube heavily uses 'runs' arrays to format text strings."""
-
     runs: list[Run]
 
 
@@ -228,9 +234,20 @@ class NotificationActionRenderer(BaseModel):
     tracking_params: Optional[str] = Field(None, alias="trackingParams")
 
 
+class NotificationTextRenderer(BaseModel):
+    success_response_text: Optional[FormattedText] = Field(
+        None, alias="successResponseText"
+    )
+    tracking_params: Optional[str] = Field(None, alias="trackingParams")
+
+
 class ToastItem(BaseModel):
-    notification_action_renderer: NotificationActionRenderer = Field(
-        alias="notificationActionRenderer"
+    # Both renderers are optional since YouTube swaps them out depending on the action
+    notification_action_renderer: Optional[NotificationActionRenderer] = Field(
+        None, alias="notificationActionRenderer"
+    )
+    notification_text_renderer: Optional[NotificationTextRenderer] = Field(
+        None, alias="notificationTextRenderer"
     )
 
 
@@ -246,7 +263,12 @@ class Action(BaseModel):
 
 
 # Like Response Models
-class LikeResponse(BaseModel):
+class RateSongResponse(BaseModel):
+    """
+    Handles LIKE, DISLIKE, and INDIFFERENT responses.
+    Actions array will be None when removing a rating (INDIFFERENT).
+    """
+
     response_context: Optional[ResponseContext] = Field(None, alias="responseContext")
     actions: Optional[list[Action]] = None
 
@@ -359,30 +381,35 @@ class TestYtMusicDataParsing(unittest.TestCase):
 
         with open("debug_like_response.json", "w") as f:
             json.dump(res, f, indent=2)
-
+        val = RateSongResponse.model_validate(res)
+        self.assertIsNotNone(
+            val.response_context, "Like response missing responseContext"
+        )
+        self.assertIsNotNone(val.actions, "Like response missing actions")
+        self.assertGreater(len(val.actions), 0, "Like response has empty actions list")
         # Dislike the song
         res = self.yt.rate_song(video_id, ytmusicapi.LikeStatus.DISLIKE)
         logging.info(f"Dislike response: {res}")
         with open("debug_dislike_response.json", "w") as f:
             json.dump(res, f, indent=2)
+        val = RateSongResponse.model_validate(res)
+        self.assertIsNotNone(
+            val.response_context, "Dislike response missing responseContext"
+        )
+        self.assertIsNotNone(val.actions, "Dislike response missing actions")
+        self.assertGreater(
+            len(val.actions), 0, "Dislike response has empty actions list"
+        )
 
         # Reset to indifferent
         res = self.yt.rate_song(video_id, ytmusicapi.LikeStatus.INDIFFERENT)
         logging.info(f"Indifferent response: {res}")
         with open("debug_indifferent_response.json", "w") as f:
             json.dump(res, f, indent=2)
-        # song_data = self.yt.get_song(video_id)
-        # song_detail = SongDetail.model_validate(song_data)
-        # self.assertEqual(
-        #     song_detail.video_details.video_id,
-        #     video_id,
-        #     "Mismatch in video ID after like",
-        # )
-        # self.assertEqual(
-        #     song_detail.microformat.microformat_data_renderer.title,
-        #     song_detail.video_details.title,
-        #     "Title mismatch between video details and microformat after like",
-        # )
+        val = RateSongResponse.model_validate(res)
+        self.assertIsNotNone(
+            val.response_context, "Indifferent response missing responseContext"
+        )
 
 
 if __name__ == "__main__":

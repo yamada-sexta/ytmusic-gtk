@@ -33,6 +33,7 @@ class YTMusicApp(Adw.Application):
     ):
         super().__init__(application_id=application_id, **kwargs)
         self.application_name = application_name
+        self.application_id = application_id
         self.application_icon = application_icon
         self.developer_name = developer_name
         self.app_version = app_version
@@ -114,7 +115,12 @@ class YTMusicApp(Adw.Application):
             logging.error("Failed to initialize YTMusic API client.")
             return
         client = YTClient(api)
-        self.win = YTMusicWindow(application=app, client=client)
+        self.win = YTMusicWindow(
+            application=app,
+            app_name=self.application_name,
+            app_id=self.application_id,
+            client=client,
+        )
         self.win.present()
 
     def on_preferences_action(self, action, param):

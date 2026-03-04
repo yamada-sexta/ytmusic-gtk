@@ -1,3 +1,5 @@
+from lib.data import LikeStatus
+from lib.data import RateSongResponse
 from lib.data import HomePageTypeAdapter
 from pydantic import TypeAdapter
 import pathlib
@@ -31,36 +33,38 @@ class LocalAudio(BaseModel):
 
 def rx_fetch(
     parser: type[T] | TypeAdapter[T],
-) -> Callable[[Callable[..., Any]], Callable[..., Observable[Optional[tuple[T, Any]]]]]:
-
+) -> Callable[
+    [Callable[P, Any]],
+    # The return type is now strictly an Observable
+    Callable[P, Observable[Optional[tuple[T, Any]]]],
+]:
     adapter = parser if isinstance(parser, TypeAdapter) else TypeAdapter(parser)
 
     def decorator(
-        func: Callable[..., Any],
-    ) -> Callable[..., Observable[Optional[tuple[T, Any]]]]:
+        func: Callable[P, Any],
+    ) -> Callable[P, Observable[Optional[tuple[T, Any]]]]:
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            blocking = cast(bool, kwargs.pop("blocking", False))
+        def wrapper(
+            *args: P.args, **kwargs: P.kwargs
+        ) -> Observable[Optional[tuple[T, Any]]]:
+            blocking = cast(bool, kwargs.get("blocking", False))
 
-            # 1. Check if ANY arguments are Observables
             has_observable = any(isinstance(a, Observable) for a in args) or any(
                 isinstance(v, Observable) for v in kwargs.values()
             )
 
-            # 2. Synchronous/Blocking Path (Bypass Rx entirely if no observables are used)
+            # 1. Synchronous Path: Wrap the result in rx.just to keep the return type consistent
             if blocking:
                 if has_observable:
-                    raise ValueError(
-                        "Cannot use blocking=True when passing Observables as arguments."
-                    )
+                    raise ValueError("Cannot use blocking=True with Observables.")
 
                 raw_data = func(*args, **kwargs)
-                if not raw_data:
-                    return None
-                return (adapter.validate_python(raw_data), raw_data)
+                parsed = (
+                    (adapter.validate_python(raw_data), raw_data) if raw_data else None
+                )
+                return rx.just(parsed)
 
-            # 3. Reactive Path
-            # Convert all args and kwargs into Observables (wrap static values in rx.just)
+            # 2. Reactive Path
             obs_args = [a if isinstance(a, Observable) else rx.just(a) for a in args]
             kwarg_keys = list(kwargs.keys())
             obs_kwargs = [
@@ -68,42 +72,41 @@ def rx_fetch(
                 for k in kwarg_keys
             ]
 
-            all_observables = obs_args + obs_kwargs
+            all_observables = cast(list[Observable[Any]], obs_args + obs_kwargs)
 
-            # 4. Create the trigger stream
             if all_observables:
-                # combine_latest emits a tuple of the latest values whenever ANY of the observables emit
-                trigger = rx.combine_latest(*all_observables)
+                # Type ignore required for unpacking into overloads
+                trigger = cast(
+                    Observable[tuple[Any, ...]],
+                    rx.combine_latest(*all_observables),  # type: ignore
+                )
             else:
-                # Fallback for methods with 0 arguments (like get_account_info)
                 trigger = rx.just(())
 
-            # 5. Define the actual fetch work that runs when trigger emits
             def create_fetch_observable(
                 combined_vals: tuple,
             ) -> Observable[Optional[tuple[T, Any]]]:
-                # Reconstruct args and kwargs from the combined tuple
                 if all_observables:
                     resolved_args = combined_vals[: len(args)]
                     resolved_kwargs = dict(zip(kwarg_keys, combined_vals[len(args) :]))
                 else:
-                    resolved_args = ()
-                    resolved_kwargs = {}
+                    resolved_args, resolved_kwargs = (), {}
 
                 def fetch_work() -> Optional[tuple[T, Any]]:
-                    raw_data = func(*resolved_args, **resolved_kwargs)
-                    if not raw_data:
-                        return None
-                    return (adapter.validate_python(raw_data), raw_data)
+                    raw_data = func(*resolved_args, **resolved_kwargs)  # type: ignore
+                    return (
+                        (adapter.validate_python(raw_data), raw_data)
+                        if raw_data
+                        else None
+                    )
 
-                # Wrap the I/O work in a thread pool observable
                 return rx.from_callable(fetch_work).pipe(
                     operators.subscribe_on(thread_pool_scheduler)
                 )
 
-            # 6. switch_map cancels the previous fetch if a new argument emits before it finishes
             return trigger.pipe(
                 operators.switch_map(create_fetch_observable),
+                # Start with None so subscribers get an immediate emission while loading
                 operators.start_with(cast(Optional[tuple[T, Any]], None)),
             )
 
@@ -205,6 +208,8 @@ class YTClient:
     ) -> Optional[dict]:
         return self.api.get_album(unwrap(browse_id))
 
-    @
-    def rate_song(self, video_id: str, rating: str) -> None:
-        self.api.rate_song(video_id, rating)
+    @rx_fetch(RateSongResponse)
+    def rate_song(
+        self, video_id: RxVal[str], rating: RxVal[LikeStatus], *, blocking: bool = False
+    ) -> Optional[dict]:
+        self.api.rate_song(unwrap(video_id), ytmusicapi.LikeStatus(rating))

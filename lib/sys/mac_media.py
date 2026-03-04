@@ -34,8 +34,8 @@ def setup_mac_media_controller(state: "PlayerState") -> None:
         logging.error("macOS MediaPlayer framework or PyObjC not available.")
         return
 
-    info_center = MPNowPlayingInfoCenter.defaultCenter()
-    command_center = MPRemoteCommandCenter.sharedCommandCenter()
+    info_center = MPNowPlayingInfoCenter.defaultCenter()  # type: ignore
+    command_center = MPRemoteCommandCenter.sharedCommandCenter()  # type: ignore
 
     _artwork_cache: dict[str, Any] = {}
 
