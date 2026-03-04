@@ -27,6 +27,11 @@ def main() -> None:
     tray = QSystemTrayIcon(icon)
     tray.setToolTip("YT Music")
 
+    # On macOS, mark as template so the OS auto-tints for light/dark mode
+    if sys.platform == "darwin":
+        icon.setIsMask(True)
+        tray.setIcon(icon)
+
     menu = QMenu()
     show_action = menu.addAction("Show Window")
     show_action.triggered.connect(lambda: _send("show"))
