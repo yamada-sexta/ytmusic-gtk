@@ -24,16 +24,11 @@ dependencies = [
 app_name = "YT Music"
 app_id = "com.yamadasexta.YTMusicApp"
 developer_name = "Yamada Sexta"
-repo = "https://github.com/yamada-sexta/ytmusic-gtk"
+repo_url = "https://github.com/yamada-sexta/ytmusic-gtk"
 
 [tool.pyrefly]
-project-includes = [
-    "**/*.py*",
-    "**/*.ipynb",
-]
+project-includes = ["**/*.py*", "**/*.ipynb"]
 ignore-missing-imports = ["AppKit.*", "Foundation.*", "MediaPlayer.*"]
 
 [dependency-groups]
-dev = [
-    "pygobject-stubs>=2.16.0",
-]
+dev = ["pygobject-stubs>=2.16.0"]

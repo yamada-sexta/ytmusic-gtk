@@ -43,8 +43,8 @@ def main():
     app_name = pyproject["tool"]["ytmusic-gtk"]["app_name"]
     app_id = pyproject["tool"]["ytmusic-gtk"]["app_id"]
     developer_name = pyproject["tool"]["ytmusic-gtk"]["developer_name"]
-    app_version = pyproject["tool"]["ytmusic-gtk"]["app_version"]
-    repo_url = pyproject["tool"]["ytmusic-gtk"]["repo"]
+    app_version = pyproject["project"]["version"]
+    repo_url = pyproject["tool"]["ytmusic-gtk"]["repo_url"]
     logging.info(f"Application name: {app_name}")
     logging.info(f"Application ID: {app_id}")
     logging.info(f"Developer name: {developer_name}")
