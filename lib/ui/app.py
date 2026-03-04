@@ -54,6 +54,11 @@ class YTMusicApp(Adw.Application):
 
         setup_tray(self)
 
+        # macOS dock click handler
+        from lib.sys.mac_dock import setup_macos_dock_handler
+
+        setup_macos_dock_handler(self)
+
     def on_activate(self, app: Gtk.Application):
         if self.win:
             self.win.set_visible(True)
