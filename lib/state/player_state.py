@@ -212,10 +212,10 @@ def start_play(
 
             if playlist_id and not playlist_id.startswith("RD"):
                 logging.info(f"Fetching playlist details for {playlist_id}")
-                raw_playlist = yt.get_watch_playlist(playlist_id)
+                raw_playlist = yt.api.get_watch_playlist(playlistId=playlist_id)
             elif video_id:
                 logging.info(f"Fetching song details for {video_id}")
-                raw_playlist = yt.get_watch_playlist(video_id)
+                raw_playlist = yt.api.get_watch_playlist(videoId=video_id)
             if not raw_playlist:
                 logging.warning("No additional details found for this item.")
                 return
