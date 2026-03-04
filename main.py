@@ -3,7 +3,7 @@ import os
 import sys
 import subprocess
 
-# --- macOS Homebrew & Virtual Environment Fix ---
+# macOS Homebrew & Virtual Environment Fix
 try:
     brew_prefix = subprocess.check_output(["brew", "--prefix"], text=True).strip()
     brew_lib_path = f"{brew_prefix}/lib"
@@ -16,11 +16,10 @@ try:
         os.execv(sys.executable, [sys.executable] + sys.argv)
 except Exception as e:
     print(f"Warning: Could not configure Homebrew paths automatically: {e}")
-# ------------------------------------------------
 
 
 def main():
-    logging.basicConfig(level=logging.DEBUG, format="[%(levelname)s] %(message)s")
+    logging.basicConfig(level=logging.DEBUG, format="[%(levelname)s] %(name)s: %(message)s")
 
     import gi
 
