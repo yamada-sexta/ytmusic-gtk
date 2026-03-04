@@ -17,7 +17,7 @@ from lib.ui.home import HomePage
 class YTMusicWindow(Adw.ApplicationWindow):
     def __init__(
         self,
-        client_obs: BehaviorSubject[Optional["YTClient"]],
+        client_obs: Observable[Optional["YTClient"]],
         app_name: str,
         app_id: str,
         **kwargs,
