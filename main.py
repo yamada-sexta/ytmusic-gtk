@@ -37,6 +37,10 @@ def main():
     GLib.set_prgname("ytmusic-gtk")
     GLib.set_application_name("YT Music")
 
+    import setproctitle
+
+    setproctitle.setproctitle("YT Music")
+
     from lib.ui.app import YTMusicApp
 
     app = YTMusicApp(application_id="com.example.YTMusicApp")
