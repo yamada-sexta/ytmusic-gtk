@@ -40,11 +40,11 @@ def main():
     with open("pyproject.toml", "rb") as f:
         pyproject = tomllib.load(f)
 
-    app_name = pyproject["project"]["metadata"]["app_name"]
-    app_id = pyproject["project"]["metadata"]["app_id"]
-    developer_name = pyproject["project"]["metadata"]["developer_name"]
-    app_version = pyproject["project"]["version"]
-    repo_url = pyproject["project"]["metadata"]["repo"]
+    app_name = pyproject["tool"]["ytmusic-gtk"]["app_name"]
+    app_id = pyproject["tool"]["ytmusic-gtk"]["app_id"]
+    developer_name = pyproject["tool"]["ytmusic-gtk"]["developer_name"]
+    app_version = pyproject["tool"]["ytmusic-gtk"]["app_version"]
+    repo_url = pyproject["tool"]["ytmusic-gtk"]["repo"]
     logging.info(f"Application name: {app_name}")
     logging.info(f"Application ID: {app_id}")
     logging.info(f"Developer name: {developer_name}")

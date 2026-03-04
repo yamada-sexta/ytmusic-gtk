@@ -18,24 +18,24 @@ def setup_mac_media_controller(state: "PlayerState") -> None:
         return
 
     try:
-        from Foundation import NSNumber, NSMutableDictionary  # type: ignore
-        from AppKit import NSImage  # type: ignore
-        from MediaPlayer import MPNowPlayingInfoCenter  # type: ignore
-        from MediaPlayer import MPRemoteCommandCenter  # type: ignore
-        from MediaPlayer import MPNowPlayingInfoPropertyElapsedPlaybackTime  # type: ignore
-        from MediaPlayer import MPNowPlayingInfoPropertyPlaybackRate  # type: ignore
-        from MediaPlayer import MPMediaItemPropertyTitle  # type: ignore
-        from MediaPlayer import MPMediaItemPropertyArtist  # type: ignore
-        from MediaPlayer import MPMediaItemPropertyPlaybackDuration  # type: ignore
-        from MediaPlayer import MPMediaItemPropertyArtwork  # type: ignore
-        from MediaPlayer import MPRemoteCommandHandlerStatusSuccess  # type: ignore
-        from MediaPlayer import MPMediaItemArtwork  # type: ignore
+        from Foundation import NSNumber, NSMutableDictionary
+        from AppKit import NSImage
+        from MediaPlayer import MPNowPlayingInfoCenter
+        from MediaPlayer import MPRemoteCommandCenter
+        from MediaPlayer import MPNowPlayingInfoPropertyElapsedPlaybackTime
+        from MediaPlayer import MPNowPlayingInfoPropertyPlaybackRate
+        from MediaPlayer import MPMediaItemPropertyTitle
+        from MediaPlayer import MPMediaItemPropertyArtist
+        from MediaPlayer import MPMediaItemPropertyPlaybackDuration
+        from MediaPlayer import MPMediaItemPropertyArtwork
+        from MediaPlayer import MPRemoteCommandHandlerStatusSuccess
+        from MediaPlayer import MPMediaItemArtwork
     except ImportError:
         logging.error("macOS MediaPlayer framework or PyObjC not available.")
         return
 
-    info_center = MPNowPlayingInfoCenter.defaultCenter()  # type: ignore
-    command_center = MPRemoteCommandCenter.sharedCommandCenter()  # type: ignore
+    info_center = MPNowPlayingInfoCenter.defaultCenter()
+    command_center = MPRemoteCommandCenter.sharedCommandCenter()
 
     _artwork_cache: dict[str, Any] = {}
 
@@ -56,7 +56,9 @@ def setup_mac_media_controller(state: "PlayerState") -> None:
         if current.artist:
             now_playing_info[MPMediaItemPropertyArtist] = current.artist
         if current.album_art and current.album_art in _artwork_cache:
-            now_playing_info[MPMediaItemPropertyArtwork] = _artwork_cache[current.album_art]
+            now_playing_info[MPMediaItemPropertyArtwork] = _artwork_cache[
+                current.album_art
+            ]
 
         # MPRIS streams use nanoseconds. macOS uses seconds.
         total_time_s: float = state.stream.total_time.value / 1e9
@@ -128,7 +130,9 @@ def setup_mac_media_controller(state: "PlayerState") -> None:
     command_center.togglePlayPauseCommand().addTargetWithHandler_(on_toggle_play_pause)
     command_center.nextTrackCommand().addTargetWithHandler_(on_next_track)
     command_center.previousTrackCommand().addTargetWithHandler_(on_previous_track)
-    command_center.changePlaybackPositionCommand().addTargetWithHandler_(on_change_playback_position)
+    command_center.changePlaybackPositionCommand().addTargetWithHandler_(
+        on_change_playback_position
+    )
 
     command_center.playCommand().setEnabled_(True)
     command_center.pauseCommand().setEnabled_(True)
@@ -152,6 +156,7 @@ def setup_mac_media_controller(state: "PlayerState") -> None:
 
         art_url = current.album_art
         if art_url and art_url not in _artwork_cache:
+
             def _fetch_artwork(url: str) -> None:
                 from lib.ui.thumbnail import _fetch_image_bytes
 
@@ -169,7 +174,10 @@ def setup_mac_media_controller(state: "PlayerState") -> None:
                     logging.warning(f"Failed to fetch artwork for mac media: {e}")
 
             import threading
-            threading.Thread(target=_fetch_artwork, args=(art_url,), daemon=True).start()
+
+            threading.Thread(
+                target=_fetch_artwork, args=(art_url,), daemon=True
+            ).start()
 
         combine_latest(
             state.current.pipe(ops.filter(lambda c: c is not None)),

@@ -10,6 +10,8 @@ dependencies = [
     "pycookiecheat>=0.8.0",
     "pydantic>=2.12.5",
     "pygobject>=3.56.0",
+    # "pyobjc>=12.1",
+    # "pyobjc-core>=12.1",
     "pyobjc-framework-mediaplayer>=12.1 ; sys_platform == 'darwin'",
     "pyside6>=6.10.2",
     "pywebview>=6.1",
@@ -18,7 +20,7 @@ dependencies = [
     "ytmusicapi>=1.11.5",
 ]
 
-[project.metadata]
+[tool.ytmusic-gtk]
 app_name = "YT Music"
 app_id = "com.yamadasexta.YTMusicApp"
 developer_name = "Yamada Sexta"
@@ -29,6 +31,7 @@ project-includes = [
     "**/*.py*",
     "**/*.ipynb",
 ]
+ignore-missing-imports = ["AppKit.*", "Foundation.*", "MediaPlayer.*"]
 
 [dependency-groups]
 dev = [

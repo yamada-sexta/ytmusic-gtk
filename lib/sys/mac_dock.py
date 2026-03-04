@@ -18,15 +18,15 @@ def setup_macos_dock_handler(app: "YTMusicApp") -> None:
         return
 
     try:
-        import objc  # type: ignore
-        from AppKit import NSApplication, NSObject  # type: ignore
+        import objc 
+        from AppKit import NSApplication, NSObject 
         from gi.repository import GLib
 
         ns_app = NSApplication.sharedApplication()
         original_delegate = ns_app.delegate()
 
         # Subclass to intercept applicationShouldHandleReopen:hasVisibleWindows:
-        class DockClickDelegate(NSObject):  # type: ignore
+        class DockClickDelegate(NSObject):
             def applicationShouldHandleReopen_hasVisibleWindows_(
                 self, sender: NSApplication, has_visible: bool
             ) -> bool:

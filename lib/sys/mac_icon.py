@@ -1,5 +1,4 @@
 import logging
-import colorsys
 import logging
 import sys
 from pathlib import Path
@@ -13,10 +12,10 @@ def set_macos_dock_icon() -> None:
         return
 
     try:
-        from AppKit import NSApplication, NSImage  # type: ignore
+        from AppKit import NSApplication, NSImage
 
         base_dir = Path(__file__).parent.parent.parent.resolve()
-        icon_file = str(base_dir / "assets" / "icons" / "com.example.YTMusicApp.svg")
+        icon_file = str(base_dir / "assets" / "app" / "com.yamadasexta.YTMusicApp.svg")
         ns_image = NSImage.alloc().initWithContentsOfFile_(icon_file)
         if ns_image:
             NSApplication.sharedApplication().setApplicationIconImage_(ns_image)
