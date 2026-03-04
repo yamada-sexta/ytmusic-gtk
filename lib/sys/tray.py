@@ -12,12 +12,10 @@ if TYPE_CHECKING:
 def setup_tray(app: "YTMusicApp") -> None:
     """Spawns a separate Qt process for the system tray icon."""
 
-    if not sys.platform.startswith("linux"):
-        logging.info("Platform is not Linux. System tray disabled.")
-        return
-
     from gi.repository import GLib
 
+    base_dir = Path(__file__).parent.parent.parent.resolve()
+    icon_path = str(base_dir / "assets" / "icons" / "folder-music-symbolic.svg")
     tray_script = str(Path(__file__).parent / "tray_process.py")
 
     def show_window() -> bool:
@@ -44,7 +42,7 @@ def setup_tray(app: "YTMusicApp") -> None:
 
     try:
         proc = subprocess.Popen(
-            [sys.executable, tray_script],
+            [sys.executable, tray_script, icon_path],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,

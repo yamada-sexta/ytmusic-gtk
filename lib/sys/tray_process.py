@@ -12,11 +12,18 @@ from PySide6.QtGui import QIcon
 
 
 def main() -> None:
+    icon_path = sys.argv[1] if len(sys.argv) > 1 else ""
+
     qt_app = QApplication(sys.argv[:1])
     qt_app.setQuitOnLastWindowClosed(False)
 
-    # Use theme icon name so the system tray applies correct light/dark colors
-    icon = QIcon.fromTheme("folder-music-symbolic")
+    # Use theme icon on Linux for correct light/dark colors, file path elsewhere
+    if sys.platform.startswith("linux"):
+        icon = QIcon.fromTheme("folder-music-symbolic")
+    elif icon_path:
+        icon = QIcon(icon_path)
+    else:
+        icon = QIcon.fromTheme("folder-music-symbolic")
     tray = QSystemTrayIcon(icon)
     tray.setToolTip("YT Music")
 

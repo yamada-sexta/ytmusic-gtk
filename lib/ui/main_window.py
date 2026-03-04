@@ -149,8 +149,12 @@ class YTMusicWindow(Adw.ApplicationWindow):
 
     def _on_close_request(self, window: Adw.ApplicationWindow) -> bool:
         """Hide the window instead of destroying it to keep running in the tray."""
-        self.set_visible(False)
-        return True
+        app = self.get_application()
+        if app and getattr(app, "_tray_process", None):
+            logging.info("Hiding window, keeping process alive for tray.")
+            self.set_visible(False)
+            return True
+        return False
 
     def fetch_data_async(
         self, yt_subject: BehaviorSubject[Optional[ytmusicapi.YTMusic]]
