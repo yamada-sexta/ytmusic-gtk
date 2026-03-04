@@ -197,7 +197,7 @@ def HomeItemCard(
     collection_play_btn: Optional[Gtk.Button] = None
     if is_collection:
         collection_play_btn = Gtk.Button(icon_name="media-playback-start-symbolic")
-        # collection_play_btn.add_css_class("suggested-action")
+        collection_play_btn.add_css_class("osd")
         collection_play_btn.add_css_class("circular")
         collection_play_btn.add_css_class("collection-play-btn")
         collection_play_btn.set_size_request(48, 48)
@@ -219,12 +219,26 @@ def HomeItemCard(
         overlay.add_controller(hover_ctrl)
 
         def on_hover_changed(is_hovered: bool) -> None:
-            def update() -> int:
-                if collection_play_btn:
-                    collection_play_btn.set_opacity(1.0 if is_hovered else 0.0)
+            def animate() -> int:
+                if not collection_play_btn:
+                    return GLib.SOURCE_REMOVE
+                target_opacity = 1.0 if is_hovered else 0.0
+                current_opacity = collection_play_btn.get_opacity()
+                anim_target = Adw.CallbackAnimationTarget.new(
+                    lambda val: collection_play_btn.set_opacity(val)
+                )
+                anim = Adw.TimedAnimation.new(
+                    collection_play_btn,
+                    current_opacity,
+                    target_opacity,
+                    200,
+                    anim_target,
+                )
+                anim.set_easing(Adw.Easing.EASE_IN_OUT_CUBIC)
+                anim.play()
                 return GLib.SOURCE_REMOVE
 
-            GLib.idle_add(update)
+            GLib.idle_add(animate)
 
         hover_subject.subscribe(on_hover_changed)
 
