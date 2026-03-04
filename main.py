@@ -32,6 +32,11 @@ def main():
     gi.require_version("GdkPixbuf", "2.0")
     gi.require_version("Gdk", "4.0")
 
+    from gi.repository import GLib
+
+    GLib.set_prgname("ytmusic-gtk")
+    GLib.set_application_name("YT Music")
+
     from lib.ui.app import YTMusicApp
 
     app = YTMusicApp(application_id="com.example.YTMusicApp")
