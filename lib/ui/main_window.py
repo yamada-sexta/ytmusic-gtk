@@ -143,7 +143,14 @@ class YTMusicWindow(Adw.ApplicationWindow):
 
         show_now_playing.subscribe(on_nav_state_changed)
 
+        self.connect("close-request", self._on_close_request)
+
         self.fetch_data_async(yt_subject)
+
+    def _on_close_request(self, window: Adw.ApplicationWindow) -> bool:
+        """Hide the window instead of destroying it to keep running in the tray."""
+        self.set_visible(False)
+        return True
 
     def fetch_data_async(
         self, yt_subject: BehaviorSubject[Optional[ytmusicapi.YTMusic]]

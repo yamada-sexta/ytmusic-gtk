@@ -6,11 +6,15 @@ import logging
 from gi.repository import Gtk, Adw, Gst, GLib, Pango, Gio, GdkPixbuf, Gdk, GObject
 
 import os
+import subprocess
 
 
 class YTMusicApp(Adw.Application):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.win: YTMusicWindow | None = None
+        self._tray_icon = None
+        self._tray_process: subprocess.Popen[str] | None = None
         self.connect("startup", self.on_startup)
         self.connect("activate", self.on_activate)
 
@@ -39,6 +43,11 @@ class YTMusicApp(Adw.Application):
         pref_action = Gio.SimpleAction.new("preferences", None)
         pref_action.connect("activate", self.on_preferences_action)
         self.add_action(pref_action)
+
+        # System tray icon
+        from lib.sys.tray import setup_tray
+
+        setup_tray(self)
 
     def on_activate(self, app: Gtk.Application):
         self.yt_subject = BehaviorSubject[ytmusicapi.YTMusic | None](None)
