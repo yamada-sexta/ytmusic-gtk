@@ -3,6 +3,19 @@ import os
 import sys
 import subprocess
 
+# --- macOS Process Name Fix ---
+if sys.platform == "darwin":
+    try:
+        from Foundation import NSBundle  # type: ignore
+
+        bundle = NSBundle.mainBundle()
+        info = bundle.localizedInfoDictionary() or bundle.infoDictionary()
+        if info:
+            info["CFBundleName"] = "YT Music"
+    except Exception:
+        pass
+# ------------------------------------------------
+
 # --- macOS Homebrew & Virtual Environment Fix ---
 try:
     brew_prefix = subprocess.check_output(["brew", "--prefix"], text=True).strip()
