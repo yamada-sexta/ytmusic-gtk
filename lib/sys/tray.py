@@ -27,6 +27,7 @@ def setup_tray(app: "YTMusicApp") -> None:
         return False
 
     def exit_app() -> bool:
+        app.release()
         app.quit()
         return False
 
@@ -57,6 +58,9 @@ def setup_tray(app: "YTMusicApp") -> None:
         import atexit
 
         atexit.register(proc.terminate)
+
+        # Keep the GTK app alive when all windows are hidden
+        app.hold()
 
         logging.info("System tray subprocess started.")
     except Exception as e:
