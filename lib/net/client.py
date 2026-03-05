@@ -11,7 +11,6 @@ from typing import Any
 import multiprocessing
 from functools import wraps
 from typing import Optional, Callable, TypeVar, ParamSpec, cast
-from reactivex import operators as ops
 
 import ytmusicapi
 import reactivex as rx
@@ -51,11 +50,18 @@ def rx_fetch(
     parser: type[T] | TypeAdapter[T],
     *,
     scheduler: Optional[ThreadPoolScheduler] = None,
-    use_cache: bool = True,  # <-- Added default cache configuration
+    use_cache: bool = True,
 ) -> Callable[
     [Callable[P, Any]],
     Callable[P, Observable[Optional[tuple[T, Any]]]],
 ]:
+    """
+    Decorator to wrap client methods, allowing them to accept both raw values and Observables as arguments.
+    The decorated method will return an Observable that emits the parsed result whenever any of the input Observables emit a new value.
+    The return value will be a tuple of (parsed_result, raw_data) where parsed_result is the output of the provided parser and raw_data is the original data returned by the API method.
+    If `blocking=True` is passed as a keyword argument, the method will execute synchronously and block until the result is available. It will still return an Observable, but it will emit the result immediately and complete.
+    If `force_refresh=True` is passed as a keyword argument, the method will bypass the cache and fetch fresh data from the API, even if a cached value exists for the given arguments.
+    """
     adapter = parser if isinstance(parser, TypeAdapter) else TypeAdapter(parser)
 
     def decorator(
