@@ -1,12 +1,10 @@
 from lib.net.client import YTClient
-from lib.data import AlbumData, AlbumTrack
+from lib.data import AlbumData
 from lib.ui.thumbnail import ThumbnailWidget
 from lib.ui.play_bar import PlayerState
 from lib.state.player_state import play_watch_playlist
 from typing import Optional, Literal
 import reactivex as rx
-import ytmusicapi
-import threading
 import logging
 from gi.repository import Gtk, Adw, GLib, Pango, Gdk
 
@@ -249,30 +247,6 @@ def CollectionDetailPage(
 
         return GLib.SOURCE_REMOVE
 
-    # def fetch_data() -> None:
-    #     try:
-    #         if item_type == "playlist":
-    #             raw_data = yt.get_playlist(item_id)
-    #         else:
-    #             raw_data = yt.get_album(item_id)
-    #         album = AlbumData.model_validate(raw_data)
-    #         GLib.idle_add(build_detail_ui, album)
-    #     except Exception as e:
-    #         logging.error(f"Failed to fetch {item_type} {item_id}: {e}")
-    #         error_msg = str(e)
-
-    #         def show_error() -> bool:
-    #             error_page = Adw.StatusPage()
-    #             error_page.set_icon_name("dialog-error-symbolic")
-    #             error_page.set_title(f"Failed to load {item_type}")
-    #             error_page.set_description(error_msg)
-    #             content_stack.add_named(error_page, "error")
-    #             content_stack.set_visible_child_name("error")
-    #             return GLib.SOURCE_REMOVE
-
-    #         GLib.idle_add(show_error)
-
-    # threading.Thread(target=fetch_data, daemon=True).start()
     def show_error(error_msg: str) -> bool:
         error_page = Adw.StatusPage()
         error_page.set_icon_name("dialog-error-symbolic")
@@ -286,24 +260,24 @@ def CollectionDetailPage(
         data_stream = client.get_playlist(item_id)
 
         def on_playlist(album: Optional[tuple[AlbumData, dict]]) -> None:
-            # GLib.idle_add(build_detail_ui, album)
-            if album is not None:
-                build_detail_ui(album[0])
-            else:
-                logging.error(f"Failed to load playlist {item_id}")
-                GLib.idle_add(show_error, "Could not load playlist data")
+            if album is None:
+                # This is normal for the first load
+                return
+            build_detail_ui(album[0])
 
-        data_stream.subscribe(on_playlist)
+        data_stream.subscribe(
+            on_playlist, on_error=lambda e: (GLib.idle_add(show_error, str(e)), None)[1]
+        )
     else:
         data_stream = client.get_album(item_id)
 
         def on_album(album: Optional[tuple[AlbumData, dict]]) -> None:
-            if album is not None:
-                build_detail_ui(album[0])
-            else:
-                logging.error(f"Failed to load album {item_id}")
-                GLib.idle_add(show_error, "Could not load album data")
+            if album is None:
+                return
+            build_detail_ui(album[0])
 
-        data_stream.subscribe(on_album)
+        data_stream.subscribe(
+            on_album, on_error=lambda e: (GLib.idle_add(show_error, str(e)), None)[1]
+        )
 
     return page

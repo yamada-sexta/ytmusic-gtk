@@ -13,14 +13,7 @@ from reactivex.subject import BehaviorSubject
 from typing import List, Optional
 from lib.ui.play_bar import PlayerState
 from lib.state.player_state import PlayState
-
-
-# Since the root of the Home data is a List (not a dictionary),
-# we use TypeAdapter just like you did for History.
-# HomePageTypeAdapter = TypeAdapter(List[HomeSectionData])
-
-# Get type of HomePage for type hinting
-# HomePageType = List[HomeSectionData]
+from lib.ui.collection_detail import CollectionDetailPage
 
 
 def HomeItemCard(
@@ -279,18 +272,11 @@ def HomeItemCard(
                 placeholder_music=placeholder_music,
             )
             return
-        if item.audio_playlist_id:
-            logging.info(
-                f"Playing album/single via audioPlaylistId: {item.audio_playlist_id}"
-            )
-            play_watch_playlist(state=player, playlist_id=item.audio_playlist_id)
-            return
+
         else:
             # No video_id — this is a collection (album, playlist, etc.)
             if item.browse_id and item.browse_id.startswith("MPRE"):
                 logging.info(f"Opening detail page for album {item.browse_id}")
-                from lib.ui.collection_detail import CollectionDetailPage
-
                 detail_page = CollectionDetailPage(
                     item.browse_id, "album", player, client
                 )
@@ -299,10 +285,19 @@ def HomeItemCard(
 
             if item.playlist_id:
                 logging.info(f"Opening detail page for playlist {item.playlist_id}")
-                from lib.ui.collection_detail import CollectionDetailPage
 
                 detail_page = CollectionDetailPage(
                     item.playlist_id, "playlist", player, client
+                )
+                nav_view.push(detail_page)
+                return
+            if item.audio_playlist_id:
+                logging.info(
+                    f"Opening detail page for single/album style {item.audio_playlist_id}"
+                )
+
+                detail_page = CollectionDetailPage(
+                    item.audio_playlist_id, "playlist", player, client
                 )
                 nav_view.push(detail_page)
                 return
@@ -560,41 +555,12 @@ def HomePage(
         on_error=on_rx_error,
     )
 
-    # # --- BACKGROUND FETCH LOGIC ---
-    # def fetch_home_data(client: YTClient, limit: int, is_reset: bool):
-    #     try:
-    #         raw_home = client.get_home(limit=limit)
-    #         # Write the raw response to a JSON file for debugging
-    #         import json
-
-    #         with open("debug_home_response.json", "w") as f:
-    #             json.dump(raw_home, f, indent=4)
-    #         home_data = HomePageTypeAdapter.validate_python(raw_home)
-    #         home_page_subject.on_next((home_data, is_reset, client))
-    #     except Exception as e:
-    #         logging.error(f"Failed to fetch home data: {e}")
-    #         if is_reset:
-    #             home_page_subject.on_next(([], is_reset, None))
-    #         else:
-    #             home_page_subject.on_next(([], False, client))
-
     def trigger_load_more(dummy_value=None):
         if is_loading.value:
             return
         logging.info("Fetching more data...")
         is_loading.on_next(True)
         bottom_spinner_box.set_visible(True)
-        # new_limit = current_limit.value + 5
-        # current_limit.on_next(new_limit)
-        # threading.Thread(
-        #     target=fetch_home_data,
-        #     args=(
-        #         yt_subject.value,
-        #         new_limit,
-        #         False,
-        #     ),  # False = don't reset UI
-        #     daemon=True,
-        # ).start()
         current_limit.on_next(current_limit.value + 5)
 
     def on_edge_reached(sw: Gtk.ScrolledWindow, pos: Gtk.PositionType):
