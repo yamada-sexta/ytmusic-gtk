@@ -126,7 +126,7 @@ def NowPlayingView(
     playing_from = Gtk.Label(label="Playing from")
     playing_from.add_css_class("dim-label")
     playing_from.set_halign(Gtk.Align.START)
-    context_title = Gtk.Label(label="Queue")
+    context_title = Gtk.Label(label="Mixed Playlist")
     context_title.set_halign(Gtk.Align.START)
     context_title.add_css_class("title-2")
     context_title.set_ellipsize(Pango.EllipsizeMode.END)

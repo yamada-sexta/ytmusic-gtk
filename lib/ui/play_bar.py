@@ -212,10 +212,6 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
     more_popover.set_has_arrow(True)
 
     more_menu_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-    # more_menu_box.set_margin_top(4)
-    # more_menu_box.set_margin_bottom(4)
-    # more_menu_box.set_margin_start(4)
-    # more_menu_box.set_margin_end(4)
 
     open_in_browser_content = Adw.ButtonContent()
     open_in_browser_content.set_icon_name("globe-alt2-symbolic")
@@ -231,6 +227,9 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
             return
         more_popover.popdown()
         url = f"https://music.youtube.com/watch?v={current.id}"
+        if current.url:
+            url = current.url
+        logging.info(f"Opening in browser: {url}")
         Gtk.show_uri(None, url, Gdk.CURRENT_TIME)
 
     open_in_browser_btn.connect("clicked", on_open_in_browser)
@@ -412,7 +411,7 @@ def SystemControls(
     )
 
     def on_shuffle_changed(val: bool) -> None:
-        toggle_css(shuffle_btn, "suggested-action", val)
+        # toggle_css(shuffle_btn, , val)
         shuffle_btn.set_opacity(1.0 if val else 0.4)
 
     state.shuffle_on.subscribe(on_shuffle_changed)
