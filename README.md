@@ -1,6 +1,6 @@
 # YT Music GTK
 
-![](./assets/icons/com.example.YTMusicApp.svg)
+![icon](./assets/app/com.yamadasexta.YTMusicApp.svg)
 
 A cross-platform Desktop YouTube Music client in GTK4.
 
@@ -56,4 +56,5 @@ It is only tested on macOS and Linux.
 - Home Page (partial)
 - Like/dislike
 - System Tray & Background Play (macOS/DBus)
+
 
