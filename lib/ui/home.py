@@ -274,6 +274,12 @@ def HomeItemCard(
                     video_id=item.video_id,
                 )
                 return
+        if item.audio_playlist_id:
+            logging.info(
+                f"Playing album/single via audioPlaylistId: {item.audio_playlist_id}"
+            )
+            start_play(state=player_state, playlist_id=item.audio_playlist_id)
+            return
         else:
             # No video_id — this is a collection (album, playlist, etc.)
             if item.browse_id and item.browse_id.startswith("MPRE"):
@@ -294,13 +300,6 @@ def HomeItemCard(
                     item.playlist_id, "playlist", player_state, client
                 )
                 nav_view.push(detail_page)
-                return
-
-            if item.audio_playlist_id:
-                logging.info(
-                    f"Playing album/single via audioPlaylistId: {item.audio_playlist_id}"
-                )
-                start_play(state=player_state, playlist_id=item.audio_playlist_id)
                 return
 
             logging.warning("Item has no video ID or audio playlist ID, cannot play.")
@@ -324,22 +323,23 @@ def HomeItemCard(
                 if isinstance(item.thumbnails, list)
                 else item.thumbnails
             )
-        # if hasattr(item, "like_status"):
-        #     like_status = item.like_status
-        new_music = MediaStatus(
-            id=item.video_id,
-            title=title,
-            artist=creator,
-            album_name=album_name,
-            album_art=thumb_url,
-            like_status=BehaviorSubject("INDIFFERENT"),
-        )
+        placeholder_music: Optional[MediaStatus] = None
+
+        if item.video_id:
+            placeholder_music = MediaStatus(
+                id=item.video_id,
+                title=title,
+                artist=creator,
+                album_name=album_name,
+                album_art=thumb_url,
+                like_status=BehaviorSubject("INDIFFERENT"),
+            )
 
         start_play(
             state=player_state,
             video_id=item.video_id,
             playlist_id=item.playlist_id,
-            initial_temp_music=new_music,
+            initial_temp_music=placeholder_music,
         )
 
     click.connect("pressed", on_card_click)

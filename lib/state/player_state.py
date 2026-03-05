@@ -119,8 +119,6 @@ def start_play(
     playlist_id: Optional[str] = None,
     initial_temp_music: Optional[MediaStatus] = None,
 ) -> None:
-    import threading
-
     yt = state.client
     if not yt:
         logging.error("No YTMusic instance available.")
@@ -137,34 +135,21 @@ def start_play(
         state.playlist.index.on_next(0)
         state.playlist.playlist_id.on_next(None)
         state.playlist.name.on_next(None)
+    playlist = yt.get_watch_playlist(playlist_id=playlist_id, video_id=video_id)
 
-    def fetch_details() -> None:
-        try:
-            raw_playlist = None
+    def on_playlist(data: Optional[tuple[WatchPlaylist, dict]]):
+        if data is None:
+            return
+        watch_playlist, _ = data
 
-            if playlist_id and not playlist_id.startswith("RD"):
-                logging.info(f"Fetching playlist details for {playlist_id}")
-                raw_playlist = yt.api.get_watch_playlist(playlistId=playlist_id)
-            elif video_id:
-                logging.info(f"Fetching song details for {video_id}")
-                raw_playlist = yt.api.get_watch_playlist(videoId=video_id)
-            if not raw_playlist:
-                logging.warning("No additional details found for this item.")
-                return
-
-            playlist = WatchPlaylist.model_validate(raw_playlist)
-
-            media_list = []
-            # Try to fetch song details in a playlist
-            for track in playlist.tracks:
-                id = track.video_id
-                if not id:
-                    continue
-                logging.debug(f"Fetching song details for {id}")
-                # detail = get_item_info(yt, id)
-                status = MediaStatus(
+        media_list: list[MediaStatus] = []
+        for track in watch_playlist.tracks:
+            id = track.video_id
+            if not id:
+                continue
+            media_list.append(
+                MediaStatus(
                     id=id,
-                    # url=track.url,
                     title=track.title,
                     artist=track.artists[0].name if track.artists else None,
                     album_name=track.album.name if track.album else None,
@@ -176,17 +161,16 @@ def start_play(
                         else BehaviorSubject[LikeStatus]("INDIFFERENT")
                     ),
                 )
-                media_list.append(status)
+            )
+        state.playlist.media.on_next(media_list)
+        state.playlist.index.on_next(0)
+        state.playlist.playlist_id.on_next(watch_playlist.playlist_id)
+        state.state.on_next(PlayState.PLAYING)
 
-            # Update media list
-            state.playlist.media.on_next(media_list)
-            state.playlist.index.on_next(0)
-            state.playlist.playlist_id.on_next(playlist.playlist_id)
-
-        except Exception as e:
-            logging.error(f"Could not fetch or download media: {e}")
-
-    threading.Thread(target=fetch_details, daemon=True).start()
+    playlist.subscribe(
+        on_next=on_playlist,
+        on_error=lambda e: logging.error(f"Could not fetch or download media: {e}"),
+    )
 
 
 def play_next(state: PlayerState) -> None:
