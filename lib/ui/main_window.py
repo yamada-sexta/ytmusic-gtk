@@ -200,8 +200,6 @@ class YTMusicWindow(Adw.ApplicationWindow):
 
         self.connect("close-request", self._on_close_request)
 
-        # self.fetch_data_async(client)
-
     def _on_close_request(self, window: Adw.ApplicationWindow) -> bool:
         """Hide the window instead of destroying it to keep running in the tray."""
         app = self.get_application()

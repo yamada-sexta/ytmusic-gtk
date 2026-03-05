@@ -3,6 +3,10 @@ import sys
 
 
 def main():
+    # Add current directory to sys.path
+    import os
+
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
     logging.basicConfig(
         level=logging.DEBUG, format="[%(levelname)s] %(name)s: %(message)s"
     )
@@ -54,6 +58,11 @@ def main():
     )
     app.run(sys.argv)
 
+
+# Capture exit to make sure we can do cleanup if needed
+import atexit
+
+atexit.register(lambda: logging.info("Application exiting..."))
 
 if __name__ == "__main__":
     main()

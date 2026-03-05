@@ -37,6 +37,10 @@ class LocalAudio(BaseModel):
     path: pathlib.Path
 
 
+class HTTPResponse(BaseModel, arbitrary_types_allowed=True):
+    response: Response
+
+
 def _make_hashable(obj: Any) -> Any:
     """Recursively converts mutable types to immutable types for cache hashing."""
     if isinstance(obj, list):
@@ -332,12 +336,38 @@ class YTClient:
 
         return res
 
-    @rx_fetch(Any, use_cache=False)
+    @rx_fetch(HTTPResponse, use_cache=False)
     def add_history_item(
         self,
         song: RxVal[SongDetail],
         *,
         blocking: bool = False,
         force_refresh: bool = False,
-    ) -> Optional[Response]:
-        return self.api.add_history_item(unwrap(song).model_dump(by_alias=True))
+    ) -> Optional[dict]:
+        res = self.api.add_history_item(unwrap(song).model_dump(by_alias=True))
+        return {"response": res}
+
+    @rx_fetch(TypeAdapter(list[Any]))
+    def search(
+        self,
+        query: RxVal[str],
+        filter: RxVal[Optional[str]] = None,
+        scope: RxVal[Optional[str]] = None,
+        limit: RxVal[int] = 20,
+        ignore_spelling: RxVal[bool] = False,
+        *,
+        blocking: bool = False,
+        force_refresh: bool = False,
+    ) -> Optional[list[dict]]:
+        res = self.api.search(
+            unwrap(query),
+            unwrap(filter),
+            unwrap(scope),
+            unwrap(limit),
+            unwrap(ignore_spelling),
+        )
+        import json
+
+        with open("debug_search.json", "w") as f:
+            json.dump(res, f)
+        return res
