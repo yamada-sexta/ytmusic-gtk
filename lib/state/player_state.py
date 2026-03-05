@@ -14,7 +14,7 @@ import pathlib
 from dataclasses import dataclass, field, replace
 from typing import Optional
 
-from gi.repository import GLib, Gst
+from gi.repository import GLib, Gst, GstApp
 from reactivex.subject import BehaviorSubject, Subject
 from reactivex import operators as ops
 import reactivex as rx
@@ -265,10 +265,67 @@ def setup_player(state: PlayerState) -> Gst.Element:
     # Allow loading the entire music into the RAM (Max 256MB)
     player.set_property("ring-buffer-max-size", 256 * 1024 * 1024)
 
-    def on_audio_file_changed(file_path: pathlib.Path | None) -> None:
-        if file_path:
+    class MemoryPlayerState:
+        def __init__(self):
+            self.bytes: bytes = b""
+            self.offset: int = 0
+
+    memory_player = MemoryPlayerState()
+
+    def on_need_data(source: Gst.Element, length: int) -> None:
+        if length > 2 * 1024 * 1024 or length <= 0:
+            length = 64 * 1024
+
+        data = memory_player.bytes
+        offset = memory_player.offset
+
+        end_offset = min(offset + length, len(data))
+        chunk = data[offset:end_offset]
+
+        if chunk:
+            # Important: Update offset BEFORE emitting to avoid recursive call loops
+            memory_player.offset = end_offset
+            buf = Gst.Buffer.new_wrapped(chunk)
+
+            # Tag buffer with offset mapping for accurate seeking
+            buf.offset = offset
+            buf.offset_end = end_offset
+
+            source.emit("push-buffer", buf)
+        else:
+            source.emit("end-of-stream")
+
+    def on_seek_data(source: Gst.Element, offset: int) -> bool:
+        # Avoid out-of-bounds seeking
+        if offset >= len(memory_player.bytes):
+            return False
+
+        memory_player.offset = max(0, min(offset, len(memory_player.bytes)))
+        return True
+
+    def on_source_setup(player: Gst.Element, source: Gst.Element) -> None:
+        factory = source.get_factory()
+        if factory and factory.get_name() == "appsrc":
+            source.set_property("format", Gst.Format.BYTES)
+            source.set_property("stream-type", GstApp.AppStreamType.RANDOM_ACCESS)
+
+            # Explicitly force size so the pipeline can calculate seek offsets
+            total_bytes = len(memory_player.bytes)
+            source.set_property("size", total_bytes)
+
+            source.connect("need-data", on_need_data)
+            source.connect("seek-data", on_seek_data)
+
+    player.connect("source-setup", on_source_setup)
+
+    def on_audio_bytes_changed(audio_bytes: bytes | None) -> None:
+        if audio_bytes:
+            memory_player.bytes = audio_bytes
+            memory_player.offset = 0
+
             player.set_state(Gst.State.READY)
-            player.set_property("uri", file_path.as_uri())
+            player.set_property("uri", "appsrc://")
+
             if state.state.value == PlayState.PLAYING:
                 player.set_state(Gst.State.PLAYING)
         else:
@@ -277,13 +334,13 @@ def setup_player(state: PlayerState) -> Gst.Element:
     import reactivex as rx
 
     state.current.pipe(
-        ops.map(lambda s: s.audio_file if s else rx.just(None)),
+        ops.map(lambda s: s.bytes if s else rx.just(None)),
         ops.switch_latest(),
         ops.distinct_until_changed(),
-    ).subscribe(on_audio_file_changed)
+    ).subscribe(on_audio_bytes_changed)
 
     def on_state_changed(s: PlayState) -> None:
-        has_audio = state.current_item and state.current_item.audio_file.value
+        has_audio = state.current_item and state.current_item.bytes.value
         if not has_audio:
             if s == PlayState.EMPTY:
                 player.set_state(Gst.State.NULL)
@@ -366,9 +423,12 @@ def setup_player(state: PlayerState) -> Gst.Element:
     def on_seek_request(position_ns: int) -> None:
         if not state.current_item:
             return
+
+        # Attempt to map time domain seek safely back into the pipeline
         player.seek_simple(
             Gst.Format.TIME, Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT, position_ns
         )
+
         state.stream.current_time.on_next(position_ns)
 
     state.stream.seek_request.subscribe(on_seek_request)
@@ -404,18 +464,20 @@ def setup_player(state: PlayerState) -> Gst.Element:
                 try:
                     if not current:
                         return
-                    bytes = path.read_bytes()
-                    current.bytes.on_next(bytes)
+                    audio_bytes = path.read_bytes()
+
+                    def _update_state():
+                        if current is not None:
+                            current.bytes.on_next(audio_bytes)
+                            state.state.on_next(PlayState.PLAYING)
+                        return False
+
+                    GLib.idle_add(_update_state)
                 except Exception as e:
                     logging.error(f"Failed to read audio file bytes: {e}")
-                    return None
-
-            current.audio_file.subscribe(
-                lambda p: threading.Thread(target=read_file_bytes, args=(p,)).start()
-            )
 
             current.audio_file.on_next(file)
-            state.state.on_next(PlayState.PLAYING)
+            threading.Thread(target=read_file_bytes, args=(file,)).start()
 
             # client.add
             # Only change state if this is still the active track
