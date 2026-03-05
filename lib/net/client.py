@@ -17,7 +17,7 @@ import reactivex as rx
 from reactivex import operators, Observable
 from reactivex.scheduler import ThreadPoolScheduler
 from pydantic import BaseModel
-
+import time
 from lib.data import AlbumData, AccountInfo, SongDetail
 
 logger = logging.getLogger(__name__)
@@ -55,6 +55,7 @@ def rx_fetch(
     *,
     scheduler: Optional[ThreadPoolScheduler] = None,
     use_cache: bool = True,
+    ttl: float = 60.0,  # Added TTL parameter, defaults to 60 seconds
 ) -> Callable[
     [Callable[P, Any]],
     Callable[P, Observable[Optional[tuple[T, Any]]]],
@@ -72,8 +73,8 @@ def rx_fetch(
         func: Callable[P, Any],
     ) -> Callable[P, Observable[Optional[tuple[T, Any]]]]:
 
-        # Method-level cache store
-        cache_store: dict[tuple, Optional[tuple[T, Any]]] = {}
+        # Method-level cache store now stores: {cache_key: (timestamp, parsed_data)}
+        cache_store: dict[tuple, tuple[float, Optional[tuple[T, Any]]]] = {}
 
         @wraps(func)
         def wrapper(
@@ -92,7 +93,6 @@ def rx_fetch(
 
                 force_refresh = cast(bool, kwargs.get("force_refresh", False))
 
-                # The key is built entirely from the input arguments
                 cache_kwargs = {
                     k: v
                     for k, v in kwargs.items()
@@ -103,17 +103,21 @@ def rx_fetch(
                     frozenset((k, _make_hashable(v)) for k, v in cache_kwargs.items()),
                 )
 
-                # Return cached value if caching is enabled, we aren't forcing a refresh, and it exists
+                # 1. Cache Hit & TTL Check
                 if use_cache and not force_refresh and cache_key in cache_store:
-                    return rx.just(cache_store[cache_key])
+                    cached_time, cached_value = cache_store[cache_key]
+                    if time.monotonic() - cached_time < ttl:
+                        return rx.just(cached_value)
 
+                # 2. Cache Miss / Expired / Force Refresh
                 raw_data = func(*args, **kwargs)
                 parsed = (
                     (adapter.validate_python(raw_data), raw_data) if raw_data else None
                 )
 
+                # 3. Store in cache with current timestamp
                 if use_cache:
-                    cache_store[cache_key] = parsed
+                    cache_store[cache_key] = (time.monotonic(), parsed)
                 return rx.just(parsed)
 
             # --- Reactive Path ---
@@ -143,10 +147,8 @@ def rx_fetch(
                 else:
                     resolved_args, resolved_kwargs = (), {}
 
-                # Extract force_refresh from the resolved observable values
                 force_refresh = cast(bool, resolved_kwargs.get("force_refresh", False))
 
-                # The key is built entirely from the resolved input arguments
                 cache_kwargs = {
                     k: v
                     for k, v in resolved_kwargs.items()
@@ -158,11 +160,13 @@ def rx_fetch(
                 )
 
                 def fetch_work() -> Optional[tuple[T, Any]]:
-                    # 1. Cache Hit
+                    # 1. Cache Hit & TTL Check
                     if use_cache and not force_refresh and cache_key in cache_store:
-                        return cache_store[cache_key]
+                        cached_time, cached_value = cache_store[cache_key]
+                        if time.monotonic() - cached_time < ttl:
+                            return cached_value
 
-                    # 2. Cache Miss or Force Refresh (or cache disabled)
+                    # 2. Cache Miss / Expired / Force Refresh
                     raw_data = func(*resolved_args, **resolved_kwargs)  # type: ignore
                     parsed = (
                         (adapter.validate_python(raw_data), raw_data)
@@ -170,9 +174,9 @@ def rx_fetch(
                         else None
                     )
 
-                    # 3. Store in cache if enabled
+                    # 3. Store in cache with current timestamp
                     if use_cache:
-                        cache_store[cache_key] = parsed
+                        cache_store[cache_key] = (time.monotonic(), parsed)
                     return parsed
 
                 return rx.from_callable(fetch_work).pipe(
