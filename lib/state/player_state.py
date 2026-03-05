@@ -402,7 +402,7 @@ def setup_player(state: PlayerState) -> Gst.Element:
                 if state.repeat_mode.value == RepeatMode.ONE:
                     player.seek_simple(
                         Gst.Format.TIME,
-                        Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT,
+                        Gst.SeekFlags.FLUSH | Gst.SeekFlags.ACCURATE,
                         0,
                     )
                     player.set_state(Gst.State.PLAYING)
@@ -426,7 +426,7 @@ def setup_player(state: PlayerState) -> Gst.Element:
 
         # Attempt to map time domain seek safely back into the pipeline
         player.seek_simple(
-            Gst.Format.TIME, Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT, position_ns
+            Gst.Format.TIME, Gst.SeekFlags.FLUSH | Gst.SeekFlags.ACCURATE, position_ns
         )
 
         state.stream.current_time.on_next(position_ns)
