@@ -20,17 +20,18 @@ def NowPlayingView(
 
     # Main Content Box
     split_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-    split_box.set_margin_start(32)
-    split_box.set_margin_end(32)
-    split_box.set_margin_top(32)
-    split_box.set_margin_bottom(32)
+    split_box.set_margin_start(0)
+    split_box.set_margin_end(0)
+    split_box.set_margin_top(0)
+    split_box.set_margin_bottom(0)
 
     # --- Left Pane (Video / Art) ---
     left_pane = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=32)
-    left_pane.set_valign(Gtk.Align.CENTER)
+    left_pane.set_valign(Gtk.Align.START)
     left_pane.set_halign(Gtk.Align.FILL)
     left_pane.set_margin_start(32)
     left_pane.set_margin_end(32)
+    left_pane.set_margin_top(48)
 
     # Large album art — fed by a reactive stream from state.current
 
@@ -47,7 +48,7 @@ def NowPlayingView(
 
     # 2. Wrap it in a clamp so it never exceeds a specific width
     art_clamp_h = Adw.Clamp(orientation=Gtk.Orientation.HORIZONTAL)
-    art_clamp_h.set_maximum_size(240)  # Allow 16:9 covers to expand fully
+    art_clamp_h.set_maximum_size(400)  # Allow 16:9 covers to expand fully
     art_clamp_h.set_child(art_widget)
     art_clamp_h.set_halign(Gtk.Align.CENTER)
     art_clamp_h.set_hexpand(True)
@@ -55,7 +56,7 @@ def NowPlayingView(
     art_clamp_h.set_vexpand(True)
 
     art_claim_v = Adw.Clamp(orientation=Gtk.Orientation.VERTICAL)
-    art_claim_v.set_maximum_size(240)  # Max height, to prevent huge 1:1 images
+    art_claim_v.set_maximum_size(400)  # Max height, to prevent huge 1:1 images
     art_claim_v.set_child(art_clamp_h)
     art_claim_v.set_valign(Gtk.Align.CENTER)
     art_claim_v.set_vexpand(True)
@@ -79,14 +80,20 @@ def NowPlayingView(
         label="<span size='x-large' weight='bold'>Loading...</span>", use_markup=True
     )
     title_label.set_ellipsize(Pango.EllipsizeMode.END)
-    title_label.set_lines(1)
+    title_label.set_wrap(True)
+    title_label.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+    title_label.set_justify(Gtk.Justification.CENTER)
+    title_label.set_lines(3)
     title_label.set_halign(Gtk.Align.FILL)
     title_label.set_xalign(0.5)
     title_label.set_max_width_chars(30)
 
     artist_label = Gtk.Label(label="Artist Name")
     artist_label.set_ellipsize(Pango.EllipsizeMode.END)
-    artist_label.set_lines(1)
+    artist_label.set_wrap(True)
+    artist_label.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+    artist_label.set_justify(Gtk.Justification.CENTER)
+    artist_label.set_lines(2)
     artist_label.set_halign(Gtk.Align.FILL)
     artist_label.set_xalign(0.5)
     artist_label.set_max_width_chars(30)
@@ -96,11 +103,12 @@ def NowPlayingView(
     left_pane.append(artist_label)
 
     right_pane = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
-    right_pane.set_size_request(300, -1)
-    right_pane.set_margin_start(16)
-    right_pane.set_margin_end(16)
+    # right_pane.set_size_request(300, -1)
+    right_pane.set_margin_end(32)
     right_pane.set_margin_top(16)
-    right_pane.set_margin_bottom(16)
+    # Make right panel expand to fill available space
+    right_pane.set_hexpand(True)
+    right_pane.set_vexpand(True)
 
     # 1. Tabs Header
     tabs_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=24)
@@ -172,7 +180,7 @@ def NowPlayingView(
     right_pane.append(queue_scroll)
 
     left_clamp = Adw.Clamp(orientation=Gtk.Orientation.HORIZONTAL)
-    left_clamp.set_maximum_size(300)
+    left_clamp.set_maximum_size(400)
     left_clamp.set_child(left_pane)
     split_box.append(left_clamp)
     split_box.append(right_pane)
