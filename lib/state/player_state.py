@@ -140,52 +140,25 @@ def start_play(
         watch_playlist, _ = data
 
         media_list: list[MediaStatus] = []
-        used_placeholder = False
-
         for track in watch_playlist.tracks:
             id = track.video_id
             if not id:
                 continue
-
-            if (
-                placeholder_music
-                and not used_placeholder
-                and placeholder_music.id == id
-            ):
-                placeholder_music.title = track.title or placeholder_music.title
-                placeholder_music.artist = (
-                    track.artists[0].name if track.artists else None
-                ) or placeholder_music.artist
-                placeholder_music.album_name = (
-                    track.album.name if track.album else None
-                ) or placeholder_music.album_name
-                placeholder_music.year = track.year or placeholder_music.year
-                placeholder_music.album_art = (
-                    track.thumbnails[-1].url if track.thumbnails else None
-                ) or placeholder_music.album_art
-                if track.like_status:
-                    placeholder_music.like_status.on_next(track.like_status)
-
-                media_list.append(placeholder_music)
-                used_placeholder = True
-            else:
-                media_list.append(
-                    MediaStatus(
-                        id=id,
-                        title=track.title,
-                        artist=track.artists[0].name if track.artists else None,
-                        album_name=track.album.name if track.album else None,
-                        year=track.year,
-                        album_art=(
-                            track.thumbnails[-1].url if track.thumbnails else None
-                        ),
-                        like_status=(
-                            BehaviorSubject[LikeStatus](track.like_status)
-                            if track.like_status
-                            else BehaviorSubject[LikeStatus]("INDIFFERENT")
-                        ),
-                    )
+            media_list.append(
+                MediaStatus(
+                    id=id,
+                    title=track.title,
+                    artist=track.artists[0].name if track.artists else None,
+                    album_name=track.album.name if track.album else None,
+                    year=track.year,
+                    album_art=track.thumbnails[-1].url if track.thumbnails else None,
+                    like_status=(
+                        BehaviorSubject[LikeStatus](track.like_status)
+                        if track.like_status
+                        else BehaviorSubject[LikeStatus]("INDIFFERENT")
+                    ),
                 )
+            )
         state.playlist.media.on_next(media_list)
         state.playlist.index.on_next(0)
         state.playlist.playlist_id.on_next(watch_playlist.playlist_id)

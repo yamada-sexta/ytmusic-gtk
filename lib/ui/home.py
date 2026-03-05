@@ -339,7 +339,7 @@ def HomeItemCard(
             state=player_state,
             video_id=item.video_id,
             playlist_id=item.playlist_id,
-            initial_temp_music=placeholder_music,
+            placeholder_music=placeholder_music,
         )
 
     click.connect("pressed", on_card_click)
