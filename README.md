@@ -19,6 +19,8 @@ To run this application, you will need to install the following dependencies on 
 
 ### Running the App
 
+> If it doesn't work, try checkout an older commit, particularly, the ones that didn't have a failed check.
+
 Clone the repo:
 
 ```bash
