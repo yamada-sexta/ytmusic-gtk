@@ -218,7 +218,7 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
     # more_menu_box.set_margin_end(4)
 
     open_in_browser_content = Adw.ButtonContent()
-    open_in_browser_content.set_icon_name("folder-globe-legacy-symbolic")
+    open_in_browser_content.set_icon_name("globe-alt2-symbolic")
     open_in_browser_content.set_label("Open in Browser")
 
     open_in_browser_btn = Gtk.Button()
