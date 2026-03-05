@@ -1,14 +1,18 @@
 import logging
 from gi.repository import Gtk, Adw, GObject
+from typing import Callable
 
 
 def create_search_bar(
-    window: Gtk.Window, toggle_button: Gtk.ToggleButton
+    window: Gtk.Window,
+    toggle_button: Gtk.ToggleButton,
+    on_search: Callable[[str], None],
 ) -> Gtk.SearchBar:
     """
     Functional factory for the SearchBar.
     'window' is needed for key capture.
     'toggle_button' is needed for the property binding.
+    'on_search' is the callback triggered when a search is run.
     """
     search_bar = Gtk.SearchBar()
     search_entry = Gtk.SearchEntry()
@@ -27,11 +31,11 @@ def create_search_bar(
     search_bar.set_key_capture_widget(window)
 
     # Logic
-    def on_search_activated(entry):
+    def on_search_activated(entry: Gtk.SearchEntry) -> None:
         query = entry.get_text()
         if query.strip():
             logging.info(f"Searching for: {query}")
-            # You can trigger a callback here or emit a signal
+            on_search(query)
 
     search_entry.connect("activate", on_search_activated)
 

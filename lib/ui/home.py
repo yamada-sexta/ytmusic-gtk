@@ -1,3 +1,4 @@
+from lib.ui.components.item_card import PlayItemCard
 from lib.ui.loading import LoadingUI
 from lib.data import HomeSectionData
 from lib.data import HomeItemData
@@ -11,10 +12,6 @@ from gi.repository import Gtk, GLib, Adw, Pango, Gio, GdkPixbuf, Gdk
 from reactivex.subject import BehaviorSubject
 from typing import List, Optional
 from lib.ui.play_bar import PlayerState
-from lib.state.player_state import PlayState
-from lib.ui.collection_detail import CollectionDetailPage
-from lib.ui.components.item_card import PlayItemCard
-
 
 # Leave HomeItemCard exactly as you have it!
 
@@ -52,6 +49,7 @@ def HomeRow(
     row_box.set_margin_end(12)  # Space after the last item
     row_box.set_margin_top(4)  # Slight gap below the section header
     row_box.set_margin_bottom(8)  # Prevents horizontal scrollbar from overlapping text
+    from lib.ui.components.item_card import PlayItemCard
 
     for item in section.contents:
         row_box.append(PlayItemCard(item, player_state, client, nav_view))

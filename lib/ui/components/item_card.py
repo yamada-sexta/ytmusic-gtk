@@ -6,7 +6,7 @@ from lib.ui.play_bar import PlayerState
 from lib.net.client import YTClient
 from lib.state.player_state import MediaStatus
 from lib.ui.collection_detail import CollectionDetailPage
-from lib.ui.home import HomeItemData
+from lib.data import HomeItemData
 
 # from lib.ui.play_watch_playlist import play_watch_playlist
 from gi.repository import Gtk, Adw, GLib, Gdk, Pango, GdkPixbuf, Graphene

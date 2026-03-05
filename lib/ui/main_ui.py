@@ -4,6 +4,7 @@ from lib.state.setup_player import setup_player
 from lib.ui.play_bar import PlayBar
 from lib.ui.now_playing import NowPlayingView
 from lib.ui.search_bar import create_search_bar
+from lib.ui.search_page import SearchPage
 from lib.ui.home import HomePage
 from reactivex.subject import BehaviorSubject
 import reactivex as rx
@@ -86,8 +87,12 @@ def MainUI(
 
     main_inner_toolbar_view = Adw.ToolbarView()
 
+    def handle_search(query: str) -> None:
+        search_page = SearchPage(query, player_state, client, nav_view)
+        nav_view.push(search_page)
+
     # Pass the parent window to the search bar creator if it still requires it
-    search_bar = create_search_bar(window, search_btn)
+    search_bar = create_search_bar(window, search_btn, handle_search)
     main_inner_toolbar_view.add_top_bar(search_bar)
 
     main_inner_toolbar_view.set_content(view_stack)
