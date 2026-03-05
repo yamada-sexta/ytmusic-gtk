@@ -307,3 +307,14 @@ class YTClient:
             unwrap(video_id),
             ytmusicapi.LikeStatus(unwrap(cast(RxVal[LikeStatus], rating))),
         )
+
+    @rx_fetch(TypeAdapter(list[AlbumData]))
+    def get_library_playlists(
+        self,
+        limit: RxVal[int] = 100,
+        *,
+        blocking: bool = False,
+        force_refresh: bool = False,
+    ) -> Optional[list[dict]]:
+        res = self.api.get_library_playlists(limit=unwrap(limit))
+        return res

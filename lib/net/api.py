@@ -1,3 +1,17 @@
+def add_path_to_sys_path():
+    # Add path to sys.path
+    import sys, os, pathlib, json
+
+    # sys.path.append(str(pathlib.Path(__file__).parent.parent.parent))
+    project = pathlib.Path(__file__).resolve().parent.parent.parent
+    print(f"Project: {project}")
+    sys.path.append(str(project))
+
+
+if __name__ == "__main__":
+    add_path_to_sys_path()
+
+
 from lib.net.client import YTClient
 from lib.data import AccountInfo
 from pycookiecheat import firefox_cookies, chrome_cookies
@@ -129,3 +143,22 @@ def auto_login(force_refresh: bool = False) -> Optional[ytmusicapi.YTMusic]:
                 f"Setup failed even with fresh browser cookies. Please log into YT Music in Chrome/Firefox. Error: {e}"
             )
             return None
+
+
+def main():
+    # add_path_to_sys_path()
+    yt = auto_login()
+    if not yt:
+
+        return
+    playlists = yt.get_library_playlists(limit=2)
+    import json
+
+    with open("debug_playlists.json", "w") as f:
+        json.dump(playlists, f, indent=2)
+
+    print(playlists)
+
+
+if __name__ == "__main__":
+    main()
