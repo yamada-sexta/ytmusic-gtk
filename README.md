@@ -8,6 +8,9 @@ A cross-platform Desktop YouTube Music client in GTK4.
 
 ---
 
+<img width="950" alt="image" src="https://github.com/user-attachments/assets/a285caed-e31f-4186-8c31-d3cf4498dde8" />
+
+
 <img width="1012" alt="mac" src="https://github.com/user-attachments/assets/7ef0acab-e0b2-48dd-a155-37dfd745eb87" />
 
 > [!WARNING]  
@@ -62,4 +65,5 @@ It is only tested on macOS and Linux.
 - Like/dislike
 - System Tray & Background Play (macOS/DBus)
 - Search (partial)
+
 
