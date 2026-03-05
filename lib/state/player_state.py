@@ -117,7 +117,7 @@ def start_play(
     state: PlayerState,
     video_id: Optional[str] = None,
     playlist_id: Optional[str] = None,
-    initial_temp_music: Optional[MediaStatus] = None,
+    placeholder_music: Optional[MediaStatus] = None,
 ) -> None:
     yt = state.client
     if not yt:
@@ -125,13 +125,13 @@ def start_play(
         return
 
     # If there is no video_id nor playlist_id, we can't play anything
-    if not video_id and not playlist_id and not initial_temp_music:
-        logging.warning("No video_id, playlist_id, nor initial_temp_music provided.")
+    if not video_id and not playlist_id and not placeholder_music:
+        logging.warning("No video_id, playlist_id, nor placeholder_music provided.")
         return
 
     state.state.on_next(PlayState.LOADING)
-    if initial_temp_music:
-        state.playlist.media.on_next([initial_temp_music])
+    if placeholder_music:
+        state.playlist.media.on_next([placeholder_music])
         state.playlist.index.on_next(0)
         state.playlist.playlist_id.on_next(None)
         state.playlist.name.on_next(None)
