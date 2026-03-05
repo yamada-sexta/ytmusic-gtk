@@ -43,13 +43,7 @@ uv run main.py
 >
 > This, of course, is a bit sus, so use it at your own risk.
 
-<img width="1014" alt="image" src="https://github.com/user-attachments/assets/590c56e9-2974-46eb-92a7-cd83ca3a36a3" />
-
-<img width="1056" alt="" src="https://github.com/user-attachments/assets/5162050c-2572-4822-a3fc-d307af6972ed" />
-
-<img width="824" alt="image" src="https://github.com/user-attachments/assets/ef56cddb-46cd-4088-b140-4b6d53081253" />
-
-> Also works on macOS :D
+It is only tested on macOS and Linux.
 
 <img width="1012" alt="mac" src="https://github.com/user-attachments/assets/7ef0acab-e0b2-48dd-a155-37dfd745eb87" />
 
