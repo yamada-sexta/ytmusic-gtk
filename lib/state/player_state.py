@@ -1,3 +1,4 @@
+from lib.data import AlbumData
 from lib.net.client import LocalAudio
 from lib.data import LikeStatus
 from lib.net.client import YTClient
@@ -119,6 +120,7 @@ def play_watch_playlist(
     video_id: Optional[str] = None,
     playlist_id: Optional[str] = None,
     placeholder_music: Optional[MediaStatus] = None,
+    playlist_title: Optional[str] = None,
 ) -> None:
     client = state.client
 
@@ -134,15 +136,30 @@ def play_watch_playlist(
         placeholder_music.is_placeholder_music = True
         state.playlist.media.on_next([placeholder_music])
         state.playlist.index.on_next(0)
-        state.playlist.playlist_id.on_next(None)
-        state.playlist.name.on_next(None)
+        state.playlist.playlist_id.on_next(playlist_id)
+        state.playlist.name.on_next(playlist_title)
     else:
         state.playlist.media.on_next([])
         state.playlist.index.on_next(0)
-        state.playlist.playlist_id.on_next(None)
-        state.playlist.name.on_next(None)
+        state.playlist.playlist_id.on_next(playlist_id)
+        state.playlist.name.on_next(playlist_title)
 
     playlist = client.get_watch_playlist(playlist_id=playlist_id, video_id=video_id)
+    # try to get playlist title
+    if playlist_id:
+
+        def on_playlist(data: Optional[tuple[AlbumData, dict]]):
+            if data is None:
+                return
+            logging.info("Got playlist title")
+            album_data, _ = data
+            state.playlist.name.on_next(album_data.title)
+            state.playlist.playlist_id.on_next(playlist_id)
+
+        client.get_playlist(playlist_id).subscribe(
+            on_next=on_playlist,
+            on_error=lambda e: logging.error(f"Could not get playlist title: {e}"),
+        )
 
     def on_playlist(data: Optional[tuple[WatchPlaylist, dict]]):
         if data is None:

@@ -121,8 +121,17 @@ def NowPlayingView(
     playing_from.set_halign(Gtk.Align.START)
     context_title = Gtk.Label(label="Queue")
     context_title.set_halign(Gtk.Align.START)
+    context_title.add_css_class("title-2")
     context_text.append(playing_from)
     context_text.append(context_title)
+
+    state.playlist.name.subscribe(
+        on_next=lambda name: (
+            context_title.set_label(GLib.markup_escape_text(name))
+            if name
+            else context_title.set_label("Queue")
+        )
+    )
 
     save_btn = Gtk.Button()
     save_btn.add_css_class("pill")
@@ -141,18 +150,18 @@ def NowPlayingView(
     context_box.append(spacer)
     context_box.append(save_btn)
 
-    # 3. Filter Chips
-    chips_scroll = Gtk.ScrolledWindow()
-    chips_scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
-    chips_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-    for chip in ["All", "Familiar", "Discover", "Popular"]:
-        btn = Gtk.Button(label=chip)
-        btn.add_css_class("pill")
-        if chip == "All":
-            btn.add_css_class("suggested-action")
-        chips_box.append(btn)
+    # # 3. Filter Chips
+    # chips_scroll = Gtk.ScrolledWindow()
+    # chips_scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
+    # chips_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+    # for chip in ["All", "Familiar", "Discover", "Popular"]:
+    #     btn = Gtk.Button(label=chip)
+    #     btn.add_css_class("pill")
+    #     if chip == "All":
+    #         btn.add_css_class("suggested-action")
+    #     chips_box.append(btn)
 
-    chips_scroll.set_child(chips_box)
+    # chips_scroll.set_child(chips_box)
 
     # 4. Queue List
     queue_scroll = Gtk.ScrolledWindow()
@@ -175,7 +184,7 @@ def NowPlayingView(
     # Assemble right pane
     right_pane.append(tabs_box)
     right_pane.append(context_box)
-    right_pane.append(chips_scroll)
+    # right_pane.append(chips_scroll)
     right_pane.append(queue_scroll)
 
     split_box.append(left_pane)

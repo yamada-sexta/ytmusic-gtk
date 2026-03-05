@@ -182,13 +182,21 @@ class YTClient:
         *,
         blocking: bool = False,
     ) -> Optional[dict]:
-        return self.api.get_watch_playlist(
+        logging.debug(
+            f"Client: Getting watch playlist: {unwrap(video_id)}, {unwrap(playlist_id)}"
+        )
+        res = self.api.get_watch_playlist(
             unwrap(video_id),
             unwrap(playlist_id),
             unwrap(limit),
             unwrap(radio),
             unwrap(shuffle),
         )
+        import json
+
+        with open("watch_playlist.json", "w") as f:
+            json.dump(res, f)
+        return res
 
     @rx_fetch(LocalAudio, scheduler=download_scheduler)
     def get_audio_file(
