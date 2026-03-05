@@ -52,6 +52,9 @@ class MediaStatus:
     like_status: BehaviorSubject[LikeStatus] = field(
         default_factory=lambda: BehaviorSubject[LikeStatus]("INDIFFERENT")
     )
+    bytes: BehaviorSubject[Optional[bytes]] = field(
+        default_factory=lambda: BehaviorSubject[Optional[bytes]](None)
+    )
 
     song: Optional[SongDetail] = field(default=None)
 
@@ -396,6 +399,21 @@ def setup_player(state: PlayerState) -> Gst.Element:
                     "Current item changed during audio file fetch, discarding result"
                 )
                 return
+
+            def read_file_bytes(path: pathlib.Path):
+                try:
+                    if not current:
+                        return
+                    bytes = path.read_bytes()
+                    current.bytes.on_next(bytes)
+                except Exception as e:
+                    logging.error(f"Failed to read audio file bytes: {e}")
+                    return None
+
+            current.audio_file.subscribe(
+                lambda p: threading.Thread(target=read_file_bytes, args=(p,)).start()
+            )
+
             current.audio_file.on_next(file)
             state.state.on_next(PlayState.PLAYING)
 
