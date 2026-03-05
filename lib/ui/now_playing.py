@@ -1,7 +1,6 @@
 from lib.ui.thumbnail import ThumbnailWidget, ThumbnailWidgetFromUrl, Thumbnail
 from typing import Optional
 from lib.state.player_state import MediaStatus
-from reactivex.subject import BehaviorSubject
 from lib.ui.play_bar import PlayerState
 from lib.state.player_state import PlayState
 from gi.repository import Gtk, Adw, GLib, GObject, Pango
@@ -123,12 +122,17 @@ def NowPlayingView(
     # 2. Context Metadata
     context_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
     context_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+    context_text.set_hexpand(True)
     playing_from = Gtk.Label(label="Playing from")
     playing_from.add_css_class("dim-label")
     playing_from.set_halign(Gtk.Align.START)
     context_title = Gtk.Label(label="Queue")
     context_title.set_halign(Gtk.Align.START)
     context_title.add_css_class("title-2")
+    context_title.set_ellipsize(Pango.EllipsizeMode.END)
+    context_title.set_wrap(True)
+    context_title.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+    context_title.set_lines(2)
     context_text.append(playing_from)
     context_text.append(context_title)
 
@@ -152,9 +156,6 @@ def NowPlayingView(
     save_btn.set_child(save_btn_box)
 
     context_box.append(context_text)
-    spacer = Gtk.Box()
-    spacer.set_hexpand(True)
-    context_box.append(spacer)
     context_box.append(save_btn)
 
     # 4. Queue List
