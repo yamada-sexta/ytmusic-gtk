@@ -1,6 +1,7 @@
 from lib.state.player_state import RepeatMode
 import logging
-import ytmusicapi
+
+# import ytmusicapi
 from lib.ui.thumbnail import ThumbnailWidgetFromUrl
 from lib.state.player_state import LikeStatus
 from lib.state.player_state import MediaStatus
@@ -279,23 +280,6 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
 
     state.current.subscribe(on_current)
 
-    def _rate_song_remote(
-        yt: "ytmusicapi.YTMusic", video_id: str, new_status: str
-    ) -> None:
-        import threading
-        from ytmusicapi.models.content.enums import LikeStatus as YTLikeStatus
-
-        yt_status = YTLikeStatus(new_status)
-
-        def do_rate() -> None:
-            try:
-                yt.rate_song(video_id, yt_status)
-                logging.debug(f"Rated {video_id} as {new_status}")
-            except Exception as e:
-                logging.error(f"Failed to rate song {video_id}: {e}")
-
-        threading.Thread(target=do_rate, daemon=True).start()
-
     def on_like_clicked(_) -> None:
         current = state.current_item
         if not current:
@@ -307,8 +291,7 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
         current.like_status.on_next(new_status)
 
         yt = state.client
-        # if yt:
-        #     _rate_song_remote(yt, current.id, new_status)
+        logging.debug(f"UI: Rating song {current.id} as {new_status}")
         yt.rate_song(current.id, new_status)
 
     def on_dislike_clicked(_) -> None:
@@ -322,8 +305,7 @@ def SongInfo(state: PlayerState) -> Gtk.Widget:
         current.like_status.on_next(new_status)
 
         yt = state.client
-        # if yt:
-        #     _rate_song_remote(yt, current.id, new_status)
+        logging.debug(f"UI: Rating song {current.id} as {new_status}")
         yt.rate_song(current.id, new_status)
 
     like_btn.connect("clicked", on_like_clicked)
@@ -413,12 +395,6 @@ def SystemControls(
     vol_scale.connect("value-changed", on_vol_scale_changed)
 
     def on_repeat_changed(val: RepeatMode) -> None:
-        # toggle_icon(
-        #     repeat_btn,
-        #     val == RepeatMode.ALL,
-        #     "media-playlist-repeat-symbolic",
-        #     "media-playlist-consecutive-symbolic",
-        # )
         if val == RepeatMode.OFF:
             repeat_btn.set_icon_name("media-playlist-consecutive-symbolic")
         elif val == RepeatMode.ALL:

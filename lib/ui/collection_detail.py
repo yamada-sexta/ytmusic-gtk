@@ -1,4 +1,4 @@
-from lib.net.yt_client import YTClient
+from lib.net.client import YTClient
 from lib.data import AlbumData, AlbumTrack
 from lib.ui.thumbnail import ThumbnailWidget
 from lib.ui.play_bar import PlayerState

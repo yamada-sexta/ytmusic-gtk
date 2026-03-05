@@ -1,3 +1,4 @@
+import logging
 from reactivex.scheduler.mainloop.gtkscheduler import GtkScheduler
 from lib.data import LikeStatus
 from lib.data import RateSongResponse
@@ -18,6 +19,8 @@ from reactivex.scheduler import ThreadPoolScheduler
 from pydantic import BaseModel
 
 from lib.data import AlbumData, AccountInfo, SongDetail
+
+logger = logging.getLogger(__name__)
 
 thread_pool_scheduler = ThreadPoolScheduler(max_workers=multiprocessing.cpu_count())
 
@@ -214,4 +217,10 @@ class YTClient:
     def rate_song(
         self, video_id: RxVal[str], rating: RxVal[LikeStatus], *, blocking: bool = False
     ) -> Optional[dict]:
-        self.api.rate_song(unwrap(video_id), ytmusicapi.LikeStatus(rating))
+        logging.debug(
+            f"Client: Rating song {unwrap(video_id)} as {unwrap(cast(RxVal[LikeStatus], rating))}"
+        )
+        self.api.rate_song(
+            unwrap(video_id),
+            ytmusicapi.LikeStatus(unwrap(cast(RxVal[LikeStatus], rating))),
+        )

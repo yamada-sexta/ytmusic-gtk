@@ -1,5 +1,5 @@
 from lib.data import LikeStatus
-from lib.net.yt_client import YTClient
+from lib.net.client import YTClient
 from typing import Any
 from typing import cast
 from lib.sys.env import CACHE_DIR

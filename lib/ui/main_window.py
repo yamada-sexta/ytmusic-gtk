@@ -2,7 +2,7 @@ from typing import Optional
 import logging
 from reactivex.operators import take
 from reactivex import Observable
-from lib.net.yt_client import YTClient
+from lib.net.client import YTClient
 from lib.ui.play_view import NowPlayingView
 from lib.ui.search_bar import create_search_bar
 from reactivex.subject import BehaviorSubject
@@ -48,7 +48,7 @@ class YTMusicWindow(Adw.ApplicationWindow):
         spinner.set_size_request(48, 48)
 
         loading_label = Gtk.Label(label="Connecting to YouTube Music...")
-        loading_label.add_css_class("caption")
+        loading_label.add_css_class("title")
 
         loading_box.append(spinner)
         loading_box.append(loading_label)

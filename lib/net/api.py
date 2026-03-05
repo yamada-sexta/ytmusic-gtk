@@ -1,4 +1,4 @@
-from lib.net.yt_client import YTClient
+from lib.net.client import YTClient
 from lib.data import AccountInfo
 from pycookiecheat import firefox_cookies, chrome_cookies
 import ytmusicapi

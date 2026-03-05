@@ -1,9 +1,9 @@
 from reactivex.subject import BehaviorSubject
 import logging
 from reactivex.scheduler.mainloop.gtkscheduler import GtkScheduler
-from lib.net.yt_client import thread_pool_scheduler
+from lib.net.client import thread_pool_scheduler
 from lib.net.api import auto_login
-from lib.net.yt_client import YTClient
+from lib.net.client import YTClient
 from typing import Optional
 from lib.ui.about import show_about_window
 from lib.ui.main_window import YTMusicWindow

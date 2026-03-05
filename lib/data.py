@@ -424,6 +424,6 @@ if __name__ == "__main__":
     print(f"Adding {dir} to sys.path for imports")
     sys.path.append(str(dir))
 
-    from lib.net.client import auto_login
+    from lib.net.api import auto_login
 
     unittest.main()

@@ -1,21 +1,15 @@
 from lib.data import HomeSectionData
 from lib.data import HomeItemData
-from lib.net.yt_client import YTClient
+from lib.net.client import YTClient
 from lib.state.player_state import start_play
 from lib.state.player_state import MediaStatus
 from lib.ui.thumbnail import ThumbnailWidget
 from reactivex import Subject
-from typing import Tuple
-from lib.data import Album, Artist, BaseMedia
 from reactivex import operators as ops
-import threading
 import logging
-import ytmusicapi
 from typing import Optional
 from gi.repository import Gtk, GLib, Adw, Pango, Gio, GdkPixbuf, Gdk
 from reactivex.subject import BehaviorSubject
-from pydantic import TypeAdapter
-from pydantic import BaseModel, Field
 from typing import List, Optional
 from lib.ui.play_bar import PlayerState
 from lib.state.player_state import PlayState
