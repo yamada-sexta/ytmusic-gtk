@@ -40,29 +40,22 @@ def NowPlayingView(
         ),
     )
     art_widget = ThumbnailWidget(art_thumbnails_stream)
-    # Tell the widget to fill its new square container
-    art_widget.set_halign(Gtk.Align.FILL)
-    art_widget.set_valign(Gtk.Align.FILL)
-
-    # Force a perfect 1:1 square, ignoring the image's actual dimensions
-    aspect_frame = Gtk.AspectFrame(ratio=1.0, obey_child=False)
-    aspect_frame.set_child(art_widget)
-    aspect_frame.set_halign(Gtk.Align.CENTER)
-    aspect_frame.set_valign(Gtk.Align.CENTER)
-    aspect_frame.set_hexpand(True)
-    aspect_frame.set_vexpand(True)
+    art_widget.set_halign(Gtk.Align.CENTER)
+    art_widget.set_valign(Gtk.Align.CENTER)
+    art_widget.set_hexpand(True)
+    art_widget.set_vexpand(True)
 
     # 2. Wrap it in a clamp so it never exceeds a specific width
     art_clamp_h = Adw.Clamp(orientation=Gtk.Orientation.HORIZONTAL)
-    art_clamp_h.set_maximum_size(240)  # Adjust this max width to fit your design
-    art_clamp_h.set_child(aspect_frame)
+    art_clamp_h.set_maximum_size(240)  # Allow 16:9 covers to expand fully
+    art_clamp_h.set_child(art_widget)
     art_clamp_h.set_halign(Gtk.Align.CENTER)
     art_clamp_h.set_hexpand(True)
     art_clamp_h.set_valign(Gtk.Align.CENTER)
     art_clamp_h.set_vexpand(True)
 
     art_claim_v = Adw.Clamp(orientation=Gtk.Orientation.VERTICAL)
-    art_claim_v.set_maximum_size(240)  # Adjust this max height to fit your design
+    art_claim_v.set_maximum_size(240)  # Max height, to prevent huge 1:1 images
     art_claim_v.set_child(art_clamp_h)
     art_claim_v.set_valign(Gtk.Align.CENTER)
     art_claim_v.set_vexpand(True)
@@ -181,10 +174,8 @@ def NowPlayingView(
 
     queue_scroll.set_child(queue_list)
 
-    # Assemble right pane
     right_pane.append(tabs_box)
     right_pane.append(context_box)
-    # right_pane.append(chips_scroll)
     right_pane.append(queue_scroll)
 
     left_clamp = Adw.Clamp(orientation=Gtk.Orientation.HORIZONTAL)
