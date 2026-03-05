@@ -80,28 +80,21 @@ def NowPlayingView(
     )
     title_label.set_ellipsize(Pango.EllipsizeMode.END)
     title_label.set_lines(1)
-    # Add these three lines:
-    title_label.set_halign(Gtk.Align.FILL)  # Fill the available width
-    title_label.set_xalign(0.5)  # Center the text internally
-    title_label.set_max_width_chars(
-        30
-    )  # Stop the label from requesting endless natural width
+    title_label.set_halign(Gtk.Align.FILL)
+    title_label.set_xalign(0.5)
+    title_label.set_max_width_chars(30)
 
     artist_label = Gtk.Label(label="Artist Name")
     artist_label.set_ellipsize(Pango.EllipsizeMode.END)
     artist_label.set_lines(1)
-    # Add these three lines:
     artist_label.set_halign(Gtk.Align.FILL)
     artist_label.set_xalign(0.5)
     artist_label.set_max_width_chars(30)
 
-    # left_pane.append(art_clamp)
     left_pane.append(art_claim_v)
-
     left_pane.append(title_label)
     left_pane.append(artist_label)
 
-    # --- Right Pane (Sidebar) ---
     right_pane = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
     right_pane.set_size_request(300, -1)
     right_pane.set_margin_start(16)
