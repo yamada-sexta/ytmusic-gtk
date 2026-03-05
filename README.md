@@ -61,3 +61,5 @@ It is only tested on macOS and Linux.
 - Home Page (partial)
 - Like/dislike
 - System Tray & Background Play (macOS/DBus)
+- Search (partial)
+
