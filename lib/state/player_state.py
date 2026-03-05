@@ -513,12 +513,30 @@ def setup_player(state: PlayerState) -> Gst.Element:
             if "playbackTracking" in missing_in_parsed:
                 logging.info(f"  (confirming playbackTracking was missing in parsed)")
 
-            client.add_history_item(rx.just(song_detail)).subscribe(
-                on_next=lambda _: logging.info(f"Added {current_id} to history"),
-                on_error=lambda e: logging.error(
-                    f"Could not add {current_id} to history: {e}"
-                ),
-            )
+            # client.add_history_item(rx.just(song_detail)).subscribe(
+            #     on_next=lambda _: logging.info(f"Added {current_id} to history"),
+            #     on_error=lambda e: logging.error(
+            #         f"Could not add {current_id} to history: {e}"
+            #     ),
+            # )
+            # Delay 10 seconds before adding to history to avoid cluttering history with skipped songs
+            def delayed_history_add():
+                if state.current_item and state.current_item.id == current_id:
+                    client.add_history_item(rx.just(song_detail)).subscribe(
+                        on_next=lambda _: logging.info(
+                            f"Added {current_id} to history"
+                        ),
+                        on_error=lambda e: logging.error(
+                            f"Could not add {current_id} to history: {e}"
+                        ),
+                    )
+                else:
+                    logging.info(
+                        f"Skipping history add for {current_id} because current item changed"
+                    )
+                return False  # Don't repeat the timeout
+
+            GLib.timeout_add(10 * 1000, delayed_history_add)
 
         client.get_song(current_id).subscribe(
             on_next=on_song_detail,
