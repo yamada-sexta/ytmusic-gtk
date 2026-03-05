@@ -171,7 +171,12 @@ def CollectionDetailPage(
 
         left_pane.append(btn_box)
 
-        root_box.append(left_pane)
+        # Add a clamp
+        left_clamp = Adw.Clamp()
+        left_clamp.set_maximum_size(240)
+        left_clamp.set_child(left_pane)
+
+        root_box.append(left_clamp)
 
         # Right pane: track list
         right_pane = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
