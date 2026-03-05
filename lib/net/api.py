@@ -52,7 +52,10 @@ def save_cookies(cookies_dict: dict):
 def get_cookies_for_url(url: str) -> Optional[dict]:
     """Extract cookies for a given URL using pycookiecheat."""
     try:
-        cookies_dict = firefox_cookies(url)
+        try:
+            cookies_dict = firefox_cookies(url)
+        except Exception:
+            cookies_dict = None
         if cookies_dict and isinstance(cookies_dict, dict):
             logging.info(f"Extracted cookies for {url}")
             return cookies_dict
@@ -110,15 +113,15 @@ def auto_login(force_refresh: bool = False) -> Optional[ytmusicapi.YTMusic]:
 
         # Verify authentication
         logging.info("Verifying authentication...")
-        account = AccountInfo.model_validate(yt.get_account_info())
-        logging.info(f"Logged in as: {account.account_name} ({account.channel_handle})")
-
-        # ytc = YTClient(yt)
-        # yt_client_account_info = ytc.get_account_info(blocking=True)
-        # yt_client_account_info.subscribe(
-        #     on_next=lambda x: logging.info(f"Account info from YTClient: {x}"),
-        #     on_error=lambda e: logging.error(f"Error fetching account info: {e}"),
-        # )
+        info = yt.get_account_info()
+        try:
+            
+            account = AccountInfo.model_validate(info)
+            logging.info(f"Logged in as: {account.account_name} ({account.channel_handle})")
+        except Exception as e:
+            logging.error(f"Error occurred while fetching account info: {e}")
+            logging.error(f"Info: {info}")
+            raise ValueError("Failed to verify authentication")
 
         playlists = yt.get_library_playlists(limit=1)
         if not playlists:

@@ -12,7 +12,7 @@ LikeStatus = Literal["INDIFFERENT", "LIKE", "DISLIKE"]
 class AccountInfo(BaseModel):
     # Field aliases map the JSON key to your Python variable
     account_name: str = Field(alias="accountName")
-    channel_handle: str = Field(alias="channelHandle")
+    channel_handle: Optional[str] = Field(alias="channelHandle")
     account_photo_url: str = Field(alias="accountPhotoUrl")
 
 
