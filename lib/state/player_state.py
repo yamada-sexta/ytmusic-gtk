@@ -142,9 +142,6 @@ def start_play(
         try:
             raw_playlist = None
 
-            if not yt:
-                return
-
             if playlist_id and not playlist_id.startswith("RD"):
                 logging.info(f"Fetching playlist details for {playlist_id}")
                 raw_playlist = yt.api.get_watch_playlist(playlistId=playlist_id)
@@ -181,25 +178,10 @@ def start_play(
                 )
                 media_list.append(status)
 
-            first_song = media_list[0]
-            if not yt:
-                return
-            # audio_file = get_audio_file(yt, first_song.id)
-            audio_file = yt.get_audio_file(first_song.id)
-            # logging.info(f"Audio file: {audio_file}")
-
-            # first_song.audio_file.on_next(audio_file)
-            audio_file.subscribe(
-                on_next=lambda x: first_song.audio_file.on_next(
-                    x[0].path if x else None
-                )
-            )
             # Update media list
             state.playlist.media.on_next(media_list)
             state.playlist.index.on_next(0)
             state.playlist.playlist_id.on_next(playlist.playlist_id)
-
-            state.state.on_next(PlayState.PLAYING)
 
         except Exception as e:
             logging.error(f"Could not fetch or download media: {e}")
@@ -399,7 +381,10 @@ def setup_player(state: PlayerState) -> Gst.Element:
             if not file.exists():
                 raise RuntimeError(f"Audio file not found: {file}")
             current.audio_file.on_next(file)
-            state.state.on_next(PlayState.PLAYING)
+
+            # Only change state if this is still the active track
+            if state.current_item and state.current_item.id == current_id:
+                state.state.on_next(PlayState.PLAYING)
 
         client.get_audio_file(current_id).subscribe(
             on_next=on_audio_file,
