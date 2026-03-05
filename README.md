@@ -53,3 +53,4 @@ It is only tested on macOS and Linux.
 - Playback (partial)
 - Home Page (partial)
 - Like/dislike
+- System Tray & Background Play (macOS/DBus)
