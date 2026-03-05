@@ -83,9 +83,6 @@ class CurrentPlaylist:
 class PlayerState:
     """Holds all reactive state and playing logic for the app."""
 
-    # yt: BehaviorSubject[Optional[YTClient]] = field(
-    #     default_factory=lambda: BehaviorSubject[Optional[YTClient]](None)
-    # )
     client: YTClient
     state: BehaviorSubject[PlayState] = field(
         default_factory=lambda: BehaviorSubject(PlayState.EMPTY)
@@ -331,6 +328,8 @@ def setup_player(state: PlayerState) -> Gst.Element:
     # Disable video output since this is an audio player
     flags &= ~(1 << 0)
     player.set_property("flags", flags)
+    # Allow loading the entire music into the RAM (Max 256MB)
+    player.set_property("ring-buffer-max-size", 256 * 1024 * 1024)
 
     def on_audio_file_changed(file_path: pathlib.Path | None) -> None:
         if file_path:
