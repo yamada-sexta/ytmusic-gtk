@@ -111,9 +111,50 @@ class Microformat(BaseModel):
     )
 
 
+class PlaybackTracking(BaseModel):
+    videostats_playback_url: Optional[dict] = Field(None, alias="videostatsPlaybackUrl")
+    videostats_delayplay_url: Optional[dict] = Field(
+        None, alias="videostatsDelayplayUrl"
+    )
+    videostats_watchtime_url: Optional[dict] = Field(
+        None, alias="videostatsWatchtimeUrl"
+    )
+    ptracking_url: Optional[dict] = Field(None, alias="ptrackingUrl")
+    qoe_url: Optional[dict] = Field(None, alias="qoeUrl")
+    atr_url: Optional[dict] = Field(None, alias="atrUrl")
+    videostats_scheduled_flush_walltime_seconds: Optional[list[int]] = Field(
+        None, alias="videostatsScheduledFlushWalltimeSeconds"
+    )
+    videostats_default_flush_interval_seconds: Optional[int] = Field(
+        None, alias="videostatsDefaultFlushIntervalSeconds"
+    )
+
+
+class PlayabilityStatus(BaseModel):
+    status: Optional[str] = None
+    playable_in_embed: Optional[bool] = Field(None, alias="playableInEmbed")
+    audio_only_playability: Optional[dict] = Field(None, alias="audioOnlyPlayability")
+    miniplayer: Optional[dict] = None
+    context_params: Optional[str] = Field(None, alias="contextParams")
+
+
+class StreamingData(BaseModel):
+    expires_in_seconds: Optional[str] = Field(None, alias="expiresInSeconds")
+    formats: list[dict] = []
+    adaptive_formats: list[dict] = Field(default_factory=list, alias="adaptiveFormats")
+    server_abr_streaming_url: Optional[str] = Field(None, alias="serverAbrStreamingUrl")
+
+
 class SongDetail(BaseModel):
     video_details: VideoDetails = Field(alias="videoDetails")
     microformat: Microformat
+    playability_status: Optional[PlayabilityStatus] = Field(
+        None, alias="playabilityStatus"
+    )
+    streaming_data: Optional[StreamingData] = Field(None, alias="streamingData")
+    playback_tracking: Optional[PlaybackTracking] = Field(
+        None, alias="playbackTracking"
+    )
 
 
 class AlbumTrack(BaseMedia):

@@ -205,7 +205,12 @@ class YTClient:
         blocking: bool = False,
     ) -> Optional[dict]:
 
-        return self.api.get_song(unwrap(video_id), unwrap(signature_timestamp))
+        raw = self.api.get_song(unwrap(video_id), unwrap(signature_timestamp))
+        import json
+
+        with open("debug_song.json", "w") as f:
+            json.dump(raw, f)
+        return raw
 
     @rx_fetch(AccountInfo)
     def get_account_info(self, *, blocking: bool = False) -> Optional[dict]:
@@ -324,9 +329,9 @@ class YTClient:
     @rx_fetch(Any, use_cache=False)
     def add_history_item(
         self,
-        song: RxVal[dict[str, Any]],
+        song: RxVal[SongDetail],
         *,
         blocking: bool = False,
         force_refresh: bool = False,
     ) -> Optional[Response]:
-        return self.api.add_history_item(unwrap(song))
+        return self.api.add_history_item(unwrap(song).model_dump(by_alias=True))

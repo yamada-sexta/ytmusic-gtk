@@ -421,7 +421,19 @@ def setup_player(state: PlayerState) -> Gst.Element:
                 )
                 return
             current.song = song_detail
-            client.add_history_item(rx.just(raw_data)).subscribe(
+
+            # Temporary test to see difference between parsed item and original
+            parsed_dict = song_detail.model_dump(by_alias=True)
+            raw_keys = set((raw_data or {}).keys())
+            parsed_keys = set(parsed_dict.keys())
+            missing_in_parsed = raw_keys - parsed_keys
+            logging.info(f"Dict diff for {current_id} - Keys in raw but not parsed:")
+            for key in sorted(list(missing_in_parsed)):
+                logging.info(f"  - {key}")
+            if "playbackTracking" in missing_in_parsed:
+                logging.info(f"  (confirming playbackTracking was missing in parsed)")
+
+            client.add_history_item(rx.just(song_detail)).subscribe(
                 on_next=lambda _: logging.info(f"Added {current_id} to history"),
                 on_error=lambda e: logging.error(
                     f"Could not add {current_id} to history: {e}"
