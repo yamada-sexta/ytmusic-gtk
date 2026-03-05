@@ -72,12 +72,15 @@ def setup_player(state: PlayerState) -> mpv.MPV:
 
     state.stream.volume.subscribe(on_volume_changed)
 
+    is_seeking = False
+
     def update_time_state() -> bool:
         if not state.current_item:
             return True  # Keep timeout alive
 
-        if state.state.value == PlayState.PLAYING:
-            # MPV uses seconds (float), while the app streams expect nanoseconds (int)
+        # Skip pushing updates to the stream if we are in the middle of a seek.
+        # This breaks the loop between the player updating the UI and the UI updating the player.
+        if state.state.value == PlayState.PLAYING and not is_seeking:
             pos = player.time_pos
             if pos is not None:
                 state.stream.current_time.on_next(int(pos * 1e9))
@@ -108,15 +111,27 @@ def setup_player(state: PlayerState) -> mpv.MPV:
             GLib.idle_add(handle_eos)
 
     def on_seek_request(position_ns: int) -> None:
+        nonlocal is_seeking
         if not state.current_item:
             return
+
+        is_seeking = True
 
         # Convert nanoseconds to seconds for MPV
         pos_sec = position_ns / 1e9
         player.time_pos = pos_sec
-        state.stream.current_time.on_next(position_ns)
 
-    state.stream.seek_request.subscribe(on_seek_request)
+        # REMOVED: state.stream.current_time.on_next(position_ns)
+        # Reason: Let the player naturally report its new time on the next tick.
+
+        # Create a tiny delay to let MPV actually process the seek
+        # before we start polling and pushing current_time again.
+        def release_seek_lock():
+            nonlocal is_seeking
+            is_seeking = False
+            return False  # Return False so GLib only runs this once
+
+        GLib.timeout_add(250, release_seek_lock)
 
     def on_current(current: Optional[MediaStatus]) -> None:
         logging.info(f"Current: {current}")
