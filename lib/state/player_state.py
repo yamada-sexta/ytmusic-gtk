@@ -114,7 +114,7 @@ class PlayerState:
         return None
 
 
-def start_play(
+def play_watch_playlist(
     state: PlayerState,
     video_id: Optional[str] = None,
     playlist_id: Optional[str] = None,

@@ -2,7 +2,7 @@ from lib.net.client import YTClient
 from lib.data import AlbumData, AlbumTrack
 from lib.ui.thumbnail import ThumbnailWidget
 from lib.ui.play_bar import PlayerState
-from lib.state.player_state import start_play
+from lib.state.player_state import play_watch_playlist
 from typing import Optional, Literal
 import reactivex as rx
 import ytmusicapi
@@ -158,7 +158,7 @@ def CollectionDetailPage(
                 logging.warning("Collection has no playlist ID, cannot play.")
                 return
             logging.info(f"Playing collection: {album.title} ({playlist_id})")
-            start_play(state=player_state, playlist_id=playlist_id)
+            play_watch_playlist(state=player_state, playlist_id=playlist_id)
 
         play_btn.connect("clicked", on_play_clicked)
         btn_box.append(play_btn)
@@ -222,7 +222,7 @@ def CollectionDetailPage(
                 def make_track_handler(video_id: str, playlist_id: Optional[str]):
                     def handler(_row: Adw.ActionRow) -> None:
                         logging.info(f"Playing track: {video_id}")
-                        start_play(
+                        play_watch_playlist(
                             state=player_state,
                             video_id=video_id,
                             playlist_id=playlist_id,

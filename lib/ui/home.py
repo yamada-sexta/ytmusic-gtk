@@ -1,7 +1,7 @@
 from lib.data import HomeSectionData
 from lib.data import HomeItemData
 from lib.net.client import YTClient
-from lib.state.player_state import start_play
+from lib.state.player_state import play_watch_playlist
 from lib.state.player_state import MediaStatus
 from lib.ui.thumbnail import ThumbnailWidget
 from reactivex import Subject
@@ -239,7 +239,7 @@ def HomeItemCard(
                         logging.info(
                             f"Quick-playing collection: {item.title} ({playlist_id})"
                         )
-                        start_play(state=player, playlist_id=playlist_id)
+                        play_watch_playlist(state=player, playlist_id=playlist_id)
                     return
 
         logging.info(f"Clicked on card: {item}")
@@ -272,7 +272,7 @@ def HomeItemCard(
                 like_status=BehaviorSubject("INDIFFERENT"),
             )
 
-            start_play(
+            play_watch_playlist(
                 state=player,
                 playlist_id=item.playlist_id,
                 video_id=item.video_id,
@@ -283,7 +283,7 @@ def HomeItemCard(
             logging.info(
                 f"Playing album/single via audioPlaylistId: {item.audio_playlist_id}"
             )
-            start_play(state=player, playlist_id=item.audio_playlist_id)
+            play_watch_playlist(state=player, playlist_id=item.audio_playlist_id)
             return
         else:
             # No video_id — this is a collection (album, playlist, etc.)
@@ -340,7 +340,7 @@ def HomeItemCard(
                 like_status=BehaviorSubject("INDIFFERENT"),
             )
 
-        start_play(
+        play_watch_playlist(
             state=player,
             video_id=item.video_id,
             playlist_id=item.playlist_id,
