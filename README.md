@@ -4,7 +4,7 @@
     <img src="./assets/app/com.yamadasexta.YTMusicApp.svg" width="256" height="150">
 </p>
 
-A cross-platform Desktop YouTube Music client in GTK4.
+A cross-platform Desktop YouTube Music client made with Libadwaita
 
 ---
 
@@ -65,5 +65,6 @@ It is only tested on macOS and Linux.
 - Like/dislike
 - System Tray & Background Play (macOS/DBus)
 - Search (partial)
+
 
 
