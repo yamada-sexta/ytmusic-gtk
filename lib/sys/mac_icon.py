@@ -15,7 +15,7 @@ def set_macos_dock_icon() -> None:
         from AppKit import NSApplication, NSImage
 
         base_dir = Path(__file__).parent.parent.parent.resolve()
-        icon_file = str(base_dir / "assets" / "app" / "com.yamadasexta.YTMusicApp.svg")
+        icon_file = str(base_dir / "assets" / "app" / "mac.svg")
         ns_image = NSImage.alloc().initWithContentsOfFile_(icon_file)
         if ns_image:
             NSApplication.sharedApplication().setApplicationIconImage_(ns_image)
