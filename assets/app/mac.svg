@@ -27,7 +27,7 @@
 
   <path d="M 128 26 C 179 26 196 26 211 41 C 226 56 226 73 226 128 C 226 183 226 200 211 215 C 196 230 179 230 128 230 C 77 230 60 230 45 215 C 30 200 30 183 30 128 C 30 73 30 56 45 41 C 60 26 77 26 128 26 Z" fill="url(#squircleBg)" filter="url(#bgShadow)" />
 
-  <circle cx="128" cy="128" r="88" fill="url(#redBase)" filter="url(#redShadow)" />
+  <circle cx="128" cy="128" r="85" fill="url(#redBase)" filter="url(#redShadow)" />
 
   <g filter="url(#playShadow)">
     <circle cx="128" cy="128" r="42" fill="none" stroke="#ffffff" stroke-width="7" />
