@@ -5,6 +5,9 @@ from pathlib import Path
 
 
 def configure_windows_gi_runtime() -> list[Path]:
+    # If it is not windows return
+    if os.name != "nt":
+        return []
     configured_roots: list[Path] = []
     seen_roots: set[Path] = set()
     candidate_roots = [
