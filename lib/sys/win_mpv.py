@@ -5,6 +5,8 @@ from pathlib import Path
 
 
 def configure_windows_mpv_runtime() -> list[Path]:
+    if os.name != "nt":
+        return []
     configured_dirs: list[Path] = []
     seen_dirs: set[Path] = set()
     candidate_dirs = [
@@ -18,15 +20,18 @@ def configure_windows_mpv_runtime() -> list[Path]:
         if not candidate:
             continue
 
-        directory = Path(candidate).expanduser()
+        directory = Path(candidate).expanduser()  # type: ignore
         if directory in seen_dirs or not directory.is_dir():
             continue
         seen_dirs.add(directory)
 
-        if not any((directory / dll_name).is_file() for dll_name in ("mpv-2.dll", "libmpv-2.dll", "mpv-1.dll")):
+        if not any(
+            (directory / dll_name).is_file()
+            for dll_name in ("mpv-2.dll", "libmpv-2.dll", "mpv-1.dll")
+        ):
             continue
 
-        os.add_dll_directory(str(directory))
+        os.add_dll_directory(str(directory))  # type: ignore
         os.environ["PATH"] = f"{directory}{os.pathsep}{os.environ.get('PATH', '')}"
         configured_dirs.append(directory)
 
