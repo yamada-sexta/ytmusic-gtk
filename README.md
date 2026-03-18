@@ -23,7 +23,7 @@ A cross-platform Desktop YouTube Music client made with Libadwaita
 To run this application, you will need to install the following dependencies on your system:
 
 - **[uv](https://docs.astral.sh/uv/#installation)**: An extremely fast Python package installer and resolver.
-- **[GTK4 / libadwaita / GObject / GStreamer](https://www.gtk.org/docs/installations/)**: The GNOME UI libraries and their respective Python bindings.
+- **[GTK4 / libadwaita / GObject](https://www.gtk.org/docs/installations/)**: The GNOME UI libraries and their respective Python bindings.
 - **[NodeJS](https://nodejs.org/en/download/), [Bun](https://bun.sh/docs/installation), or [Deno](https://deno.land/manual/getting_started/installation)**: Required by `yt-dlp` to execute JavaScript for extracting certain streams.
 - **[mpv](https://mpv.io/)**: A free and open-source media player.
 

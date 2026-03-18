@@ -59,7 +59,7 @@ def setup_mpris_controller(state: "PlayerState") -> None:
         if not state.current_item:
             return {}
         current = state.current_item
-        # MPRIS length expects microseconds. GStreamer yields nanoseconds.
+        # MPRIS length expects microseconds while the player state uses nanoseconds.
         length_us: int = state.stream.total_time.value // 1000
 
         metadata = {

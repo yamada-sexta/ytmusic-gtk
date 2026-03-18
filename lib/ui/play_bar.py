@@ -11,7 +11,7 @@ from lib.ui.helpers import toggle_icon
 from lib.ui.helpers import format_time
 from lib.state.player_state import PlayState
 from typing import Optional
-from gi.repository import Gtk, GLib, Adw, Pango, Gst, Gio, Gdk
+from gi.repository import Gtk, GLib, Adw, Pango, Gio, Gdk
 from reactivex import combine_latest
 from lib.state.player_state import PlayerState, play_next, play_previous
 
@@ -433,7 +433,7 @@ def PlayBar(
     show_now_playing: BehaviorSubject[bool],
 ) -> Gtk.Widget:
     """
-    A GStreamer-powered play bar built using functional components.
+    A play bar built using functional components.
     """
     # Main PlayBar vertical Box
     play_bar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)

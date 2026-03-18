@@ -10,19 +10,53 @@ def main():
     logging.basicConfig(
         level=logging.DEBUG, format="[%(levelname)s] %(name)s: %(message)s"
     )
+
     from lib.sys.mac_gi import mac_brew_fix
 
-    mac_brew_fix()
+    windows_gi_roots = []
+    windows_mpv_dirs = []
+    if sys.platform == "darwin":
+        mac_brew_fix()
+    elif sys.platform == "win32":
+        from lib.sys.win_gi import configure_windows_gi_runtime
+        from lib.sys.win_mpv import configure_windows_mpv_runtime
 
-    import gi
+        windows_gi_roots = configure_windows_gi_runtime()
+        windows_mpv_dirs = configure_windows_mpv_runtime()
 
-    gi.require_version("Gtk", "4.0")
-    gi.require_version("Adw", "1")
-    gi.require_version("Gst", "1.0")
-    gi.require_version("Pango", "1.0")
-    gi.require_version("Gio", "2.0")
-    gi.require_version("GdkPixbuf", "2.0")
-    gi.require_version("Gdk", "4.0")
+    try:
+        import gi
+    except ImportError as exc:
+        if sys.platform == "win32":
+            configured = ", ".join(str(path) for path in windows_gi_roots) or "none"
+            raise RuntimeError(
+                "PyGObject could not load on Windows. Install a GTK4 runtime "
+                "(for example under C:\\gtk with bin/ and lib\\girepository-1.0) "
+                f"and ensure it matches this Python architecture. Configured GTK roots: {configured}."
+            ) from exc
+        raise
+
+    required_namespaces = {
+        "Gtk": "4.0",
+        "Adw": "1",
+        "Pango": "1.0",
+        "Gio": "2.0",
+        "GdkPixbuf": "2.0",
+        "Gdk": "4.0",
+    }
+    try:
+        for namespace, version in required_namespaces.items():
+            gi.require_version(namespace, version)
+    except ValueError as exc:
+        if sys.platform == "win32":
+            configured = ", ".join(str(path) for path in windows_gi_roots) or "none"
+            missing_namespace = str(exc)
+            raise RuntimeError(
+                "A required GI namespace is missing from the Windows GTK runtime. "
+                "This app needs GTK4 and libadwaita typelibs installed. "
+                f"{missing_namespace}. Configured GTK roots: {configured}."
+            ) from exc
+        raise
 
     from gi.repository import GLib
 
@@ -46,7 +80,17 @@ def main():
     GLib.set_prgname(app_name)
     GLib.set_application_name(app_name)
 
-    from lib.ui.app import YTMusicApp
+    try:
+        from lib.ui.app import YTMusicApp
+    except OSError as exc:
+        if sys.platform == "win32" and "mpv" in str(exc).lower():
+            configured = ", ".join(str(path) for path in windows_mpv_dirs) or "none"
+            raise RuntimeError(
+                "libmpv could not be loaded on Windows. Install a build that includes "
+                "mpv-2.dll or libmpv-2.dll, or point MPV_DLL_DIR at that folder. "
+                f"Configured mpv directories: {configured}."
+            ) from exc
+        raise
 
     app = YTMusicApp(
         application_id=app_id,
