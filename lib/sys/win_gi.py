@@ -20,7 +20,7 @@ def configure_windows_gi_runtime() -> list[Path]:
         if not candidate:
             continue
 
-        root = Path(candidate).expanduser()
+        root = Path(candidate).expanduser()  # type: ignore
         if root in seen_roots:
             continue
         seen_roots.add(root)
@@ -30,7 +30,7 @@ def configure_windows_gi_runtime() -> list[Path]:
         if not (bin_dir.is_dir() and typelib_dir.is_dir()):
             continue
 
-        os.add_dll_directory(str(bin_dir))
+        os.add_dll_directory(str(bin_dir))  # type: ignore
         os.environ["PATH"] = f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}"
         os.environ["GI_TYPELIB_PATH"] = str(typelib_dir)
 
