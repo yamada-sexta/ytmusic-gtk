@@ -27,7 +27,6 @@ def create_search_bar(
     search_bar.set_child(clamp)
     search_bar.connect_entry(search_entry)
 
-    # FIX: The SearchBar must listen to the WINDOW for key presses
     search_bar.set_key_capture_widget(window)
 
     # Logic
