@@ -44,6 +44,7 @@ def save_cookies(cookies_dict: dict):
     try:
         with open(COOKIE_CACHE, "w") as f:
             json.dump(cookies_dict, f)
+        os.chmod(COOKIE_CACHE, 0o600)
         logging.info(f"Cookies saved to {COOKIE_CACHE}")
     except Exception as e:
         logging.error(f"Failed to save cookies: {e}")
@@ -109,6 +110,7 @@ def auto_login(force_refresh: bool = False) -> Optional[ytmusicapi.YTMusic]:
     try:
         # Official setup call
         ytmusicapi.setup(filepath=BROWSER_JSON, headers_raw=raw_headers)
+        os.chmod(BROWSER_JSON, 0o600)
         yt = ytmusicapi.YTMusic(BROWSER_JSON)
 
         # Verify authentication
